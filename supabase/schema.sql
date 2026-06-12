@@ -230,14 +230,14 @@ with l2 as (
   from public.cs_l2 c
   where c.received_at is not null and coalesce(c.car_hash,'') <> '' and coalesce(c.err_type,'') <> ''
 ),
-l1 as (
+l1 as (  -- 1차는 차량번호+날짜(3일이내)만 기준 (오류유형 무시)
   select c.row_key,
     exists(select 1 from public.cs_l1 p
-           where p.car_hash = c.car_hash and p.err_type = c.err_type
+           where p.car_hash = c.car_hash
              and p.received_at < c.received_at
              and p.received_at >= c.received_at - interval '3 days') as is_re
   from public.cs_l1 c
-  where c.received_at is not null and coalesce(c.car_hash,'') <> '' and coalesce(c.err_type,'') <> ''
+  where c.received_at is not null and coalesce(c.car_hash,'') <> ''
 )
 select
   (select count(*) from l1)                          as l1_total,

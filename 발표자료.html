@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>티머니 고객센터 전화접수 현황 자동화 — 기획 배경 · 구조 · 기대효과</title>
+<style>
+  :root {
+    --brand: #2563eb;
+    --brand-50: #eff6ff;
+    --brand-100: #dbeafe;
+    --brand-700: #1d4ed8;
+    --ink: #1e293b;
+    --ink-soft: #475569;
+    --muted: #94a3b8;
+    --line: #e2e8f0;
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --good: #059669;
+    --good-bg: #ecfdf5;
+    --warn: #d97706;
+    --warn-bg: #fffbeb;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Malgun Gothic",
+      "Apple SD Gothic Neo", sans-serif;
+    color: var(--ink);
+    background: var(--bg);
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 0 20px; }
+
+  /* ── Hero ── */
+  header.hero {
+    background: linear-gradient(135deg, var(--brand) 0%, var(--brand-700) 100%);
+    color: #fff;
+    padding: 64px 0 56px;
+    text-align: center;
+  }
+  .hero .eyebrow {
+    display: inline-block;
+    font-size: 13px;
+    letter-spacing: 0.18em;
+    font-weight: 700;
+    text-transform: uppercase;
+    opacity: 0.85;
+    border: 1px solid rgba(255,255,255,0.4);
+    border-radius: 999px;
+    padding: 5px 14px;
+    margin-bottom: 18px;
+  }
+  .hero h1 { font-size: 34px; font-weight: 800; line-height: 1.3; margin-bottom: 14px; }
+  .hero p { font-size: 17px; opacity: 0.92; max-width: 640px; margin: 0 auto; }
+  .hero .meta {
+    margin-top: 26px; font-size: 13px; opacity: 0.8;
+    display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;
+  }
+  .hero .meta span {
+    background: rgba(255,255,255,0.15); border-radius: 8px; padding: 5px 12px;
+  }
+  .hero .meta a { color: #fff; text-decoration: none; }
+
+  /* ── Section ── */
+  section { padding: 52px 0; }
+  section + section { border-top: 1px solid var(--line); }
+  .sec-head { margin-bottom: 28px; }
+  .sec-num {
+    display: inline-block; font-size: 13px; font-weight: 800;
+    color: var(--brand); letter-spacing: 0.1em; margin-bottom: 6px;
+  }
+  .sec-head h2 { font-size: 26px; font-weight: 800; color: var(--ink); }
+  .sec-head .lead { margin-top: 10px; font-size: 16px; color: var(--ink-soft); }
+
+  /* ── Cards / grids ── */
+  .grid { display: grid; gap: 16px; }
+  .grid-2 { grid-template-columns: repeat(2, 1fr); }
+  .grid-3 { grid-template-columns: repeat(3, 1fr); }
+  @media (max-width: 680px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+
+  .card {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 16px; padding: 22px 24px;
+    box-shadow: 0 1px 3px rgba(15,23,42,0.04);
+  }
+  .card h3 { font-size: 17px; font-weight: 800; margin-bottom: 8px; color: var(--ink); }
+  .card p { font-size: 14.5px; color: var(--ink-soft); }
+  .card .ic { font-size: 22px; margin-bottom: 10px; display: block; }
+
+  /* ── Before / After ── */
+  .ba { display: grid; grid-template-columns: 1fr auto 1fr; gap: 18px; align-items: stretch; }
+  @media (max-width: 680px) { .ba { grid-template-columns: 1fr; } .ba .arrow { transform: rotate(90deg); } }
+  .ba .arrow { align-self: center; font-size: 28px; color: var(--brand); font-weight: 800; }
+  .panel { border-radius: 16px; padding: 22px 24px; border: 1px solid var(--line); }
+  .panel.before { background: var(--warn-bg); border-color: #fde68a; }
+  .panel.after  { background: var(--good-bg); border-color: #a7f3d0; }
+  .panel .tag {
+    display: inline-block; font-size: 12px; font-weight: 800; letter-spacing: 0.06em;
+    padding: 3px 10px; border-radius: 999px; margin-bottom: 12px;
+  }
+  .panel.before .tag { background: #fef3c7; color: var(--warn); }
+  .panel.after .tag  { background: #d1fae5; color: var(--good); }
+  .panel ul { list-style: none; }
+  .panel li { font-size: 14.5px; padding: 6px 0 6px 24px; position: relative; color: var(--ink-soft); }
+  .panel.before li::before { content: "✕"; position: absolute; left: 0; color: var(--warn); font-weight: 800; }
+  .panel.after li::before  { content: "✓"; position: absolute; left: 0; color: var(--good); font-weight: 800; }
+
+  /* ── Stat numbers ── */
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  @media (max-width: 680px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+  .stat {
+    background: var(--card); border: 1px solid var(--line); border-radius: 16px;
+    padding: 20px 16px; text-align: center;
+  }
+  .stat .num { font-size: 30px; font-weight: 800; color: var(--brand); line-height: 1.1; }
+  .stat .lbl { font-size: 13px; color: var(--muted); margin-top: 6px; }
+
+  /* ── Flow / steps ── */
+  .steps { counter-reset: step; display: grid; gap: 12px; }
+  .step {
+    display: flex; gap: 16px; align-items: flex-start;
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 14px; padding: 16px 20px;
+  }
+  .step .n {
+    counter-increment: step; flex-shrink: 0;
+    width: 30px; height: 30px; border-radius: 50%;
+    background: var(--brand); color: #fff; font-weight: 800; font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .step .n::before { content: counter(step); }
+  .step h4 { font-size: 15.5px; font-weight: 700; }
+  .step p { font-size: 14px; color: var(--ink-soft); margin-top: 2px; }
+  .step code { background: var(--brand-50); color: var(--brand-700); border-radius: 6px;
+    padding: 1px 6px; font-size: 13px; }
+
+  /* ── Tech chips ── */
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    font-size: 13px; font-weight: 600; color: var(--ink-soft);
+    background: var(--brand-50); border: 1px solid var(--brand-100);
+    border-radius: 999px; padding: 6px 14px;
+  }
+
+  .note {
+    margin-top: 18px; font-size: 13.5px; color: var(--ink-soft);
+    background: var(--brand-50); border-left: 4px solid var(--brand);
+    border-radius: 0 10px 10px 0; padding: 14px 18px;
+  }
+
+  /* ── Dashboard mock (KPI 미리보기) ── */
+  .dash {
+    background: #0f172a; border-radius: 18px; padding: 22px;
+    box-shadow: 0 18px 40px rgba(15,23,42,0.18);
+  }
+  .dash .bar { display: flex; align-items: center; gap: 8px; margin-bottom: 18px; }
+  .dash .dot { width: 11px; height: 11px; border-radius: 50%; }
+  .dash .url {
+    margin-left: 8px; font-size: 12px; color: #cbd5e1;
+    background: #1e293b; border-radius: 6px; padding: 4px 12px;
+  }
+  .tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+  .tabs .t {
+    font-size: 13px; font-weight: 700; color: #cbd5e1;
+    background: #1e293b; border-radius: 999px; padding: 6px 16px;
+  }
+  .tabs .t.on { background: var(--brand); color: #fff; }
+  .kpi { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  @media (max-width: 680px) { .kpi { grid-template-columns: repeat(2, 1fr); } }
+  .kpi .k { background: #1e293b; border-radius: 12px; padding: 16px 14px; text-align: center; }
+  .kpi .k .v { font-size: 24px; font-weight: 800; color: #fff; line-height: 1.1; }
+  .kpi .k .v.accent { color: #60a5fa; }
+  .kpi .k .l { font-size: 12px; color: #94a3b8; margin-top: 5px; }
+
+  /* ── Flowchart figure ── */
+  figure.flow { text-align: center; }
+  figure.flow img {
+    width: 100%; max-width: 720px; border: 1px solid var(--line);
+    border-radius: 14px; box-shadow: 0 8px 24px rgba(15,23,42,0.08);
+  }
+  figure.flow figcaption { margin-top: 12px; font-size: 13px; color: var(--muted); }
+
+  footer {
+    text-align: center; padding: 40px 20px; color: var(--muted); font-size: 13px;
+    border-top: 1px solid var(--line);
+  }
+  footer b { color: var(--brand); }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <span class="eyebrow">ATEC Mobility · 사내 업무 도구</span>
+    <h1>고객센터 전화접수 현황 대시보드<br />CS Phone-Reception Insight</h1>
+    <p>티머니 고객센터의 전화접수·필터링 현황을 구글시트 입력만으로
+       자동 집계하고, 주차·월 단위 통계를 웹 대시보드에서 실시간으로 확인하는 사내 도구입니다.</p>
+    <div class="meta">
+      <span>티머니 고객센터 운영 지원</span>
+      <span>Google Sheets · GAS · Supabase · Vercel</span>
+      <span><a href="https://csp-insight.vercel.app" target="_blank">csp-insight.vercel.app</a></span>
+      <span>2026.06 라이브</span>
+    </div>
+  </div>
+</header>
+
+<!-- 1. 배경 -->
+<section>
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="sec-num">01 — BACKGROUND</span>
+      <h2>왜 만들었나 — 기획 배경</h2>
+      <p class="lead">
+        고객센터의 전화접수 현황은 <b>"얼마나 들어와서, 얼마나 현장으로 넘어갔는지(필터링율)"</b>가 핵심 지표입니다.
+        문제는 이 숫자를 매주 사람이 엑셀을 열어 손으로 집계했다는 점입니다.
+      </p>
+    </div>
+    <div class="grid grid-3">
+      <div class="card">
+        <span class="ic">🧮</span>
+        <h3>반복되는 수작업 집계</h3>
+        <p>1차필터·2차필터 탭을 매주 열어 행을 세고, 현장인계 건을 빼고, 필터링율을 계산하는 과정을 손으로 반복했습니다.</p>
+      </div>
+      <div class="card">
+        <span class="ic">🗂️</span>
+        <h3>흩어진 데이터</h3>
+        <p>전화상담 전체(1차필터)와 AS·현장(2차필터)이 서로 다른 탭·기준으로 존재해, 한눈에 보는 통계가 없었습니다.</p>
+      </div>
+      <div class="card">
+        <span class="ic">🔒</span>
+        <h3>개인정보 노출 위험</h3>
+        <p>원본에는 요청자명·카드번호·차량번호 등 민감정보가 섞여 있어, 그대로 공유·집계하기 어려웠습니다.</p>
+      </div>
+    </div>
+    <div class="note">
+      💡 핵심 아이디어 — 시트는 <b>입력 창구</b>로만 쓰고, 집계·중복제거·통계는 모두 <b>Supabase(DB)가 SQL로 계산</b>하게 한다.
+      사람은 시트에 입력만 하고, 숫자는 대시보드가 실시간으로 보여준다.
+    </div>
+  </div>
+</section>
+
+<!-- 2. 문제점 -->
+<section>
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="sec-num">02 — PROBLEMS</span>
+      <h2>해결해야 했던 문제점</h2>
+      <p class="lead">단순히 시트를 DB로 옮기는 것을 넘어, 데이터를 신뢰할 수 있게 만드는 과정에 난관이 있었습니다.</p>
+    </div>
+    <div class="grid grid-2">
+      <div class="card">
+        <h3>① 고유 ID 없는 1차필터 중복</h3>
+        <p>전화상담(1차필터)에는 접수번호 같은 고유 ID가 없어, 행번호 키로 적재하면 정렬·중간삽입 때
+           같은 건이 중복(684 → 868건)으로 늘어났습니다.</p>
+      </div>
+      <div class="card">
+        <h3>② 제각각인 날짜 포맷</h3>
+        <p>접수일시가 <code>yyyymmddHHmmss</code> 같은 8·12·14자리 패킹 숫자로 들어와, 주차·월 집계를 하려면
+           먼저 표준 날짜(ISO)로 정규화해야 했습니다.</p>
+      </div>
+      <div class="card">
+        <h3>③ 개인정보 마스킹</h3>
+        <p>차량번호·차량ID는 <code>***</code>로 마스킹하고 요청자명·카드번호·자유텍스트는 아예 저장하지 않도록,
+           적재 단계에서 걸러야 했습니다.</p>
+      </div>
+      <div class="card">
+        <h3>④ 집계 기준의 일관성</h3>
+        <p>"현장인계 건은 필터 집계에서 제외" 같은 규칙을 매번 손으로 적용하면 사람마다 숫자가 달라져,
+           규칙을 SQL에 고정할 필요가 있었습니다.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 3. 해결 방식 / 파이프라인 -->
+<section>
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="sec-num">03 — SOLUTION</span>
+      <h2>어떻게 개선했나 — 4단계 자동 파이프라인</h2>
+      <p class="lead">시트 입력 → GAS 적재 → Supabase 집계 → Vercel 대시보드. 사람의 손은 맨 앞 한 번뿐입니다.</p>
+    </div>
+    <div class="steps">
+      <div class="step"><span class="n"></span><div>
+        <h4>① 구글시트에 입력</h4>
+        <p>상담사가 <code>1차필터</code>(전화상담 전체)·<code>2차필터</code>(AS/현장) 탭에 평소처럼 데이터를 입력합니다.</p>
+      </div></div>
+      <div class="step"><span class="n"></span><div>
+        <h4>② GAS가 자동 적재 (10분 주기 · 전체 새로고침)</h4>
+        <p><code>installSyncTrigger</code>가 10분마다 실행 → DB를 비우고 시트를 다시 적재. 적재 중 차량번호·차량ID 마스킹,
+           날짜 ISO 정규화, 배치 내 중복 제거를 수행합니다.</p>
+      </div></div>
+      <div class="step"><span class="n"></span><div>
+        <h4>③ Supabase가 SQL로 집계</h4>
+        <p>뷰·함수(<code>cs_week_label</code>)가 일/주/월 단위로 자동 계산. "현장인계 제외" 같은 규칙이 SQL에 고정돼
+           누가 보든 같은 숫자가 나옵니다.</p>
+      </div></div>
+      <div class="step"><span class="n"></span><div>
+        <h4>④ Vercel 대시보드가 직접 조회</h4>
+        <p>Next.js 웹앱이 anon 키로 집계 뷰만 읽어, KPI·분해 차트·월간 추이를 실시간으로 보여줍니다.</p>
+      </div></div>
+    </div>
+
+    <div class="ba" style="margin-top:28px">
+      <div class="panel before">
+        <span class="tag">BEFORE</span>
+        <ul>
+          <li>매주 엑셀을 열어 손으로 집계</li>
+          <li>현장인계 제외·필터율을 수기 계산</li>
+          <li>사람마다 다른 숫자, 검증 어려움</li>
+          <li>민감정보가 그대로 섞인 원본 공유</li>
+        </ul>
+      </div>
+      <div class="arrow">→</div>
+      <div class="panel after">
+        <span class="tag">AFTER</span>
+        <ul>
+          <li>입력만 하면 10분 내 자동 반영</li>
+          <li>집계 규칙을 SQL에 고정 — 항상 같은 숫자</li>
+          <li>주차·월 통계를 웹에서 실시간 확인</li>
+          <li>마스킹·미저장으로 개인정보 보호</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="note">
+      🔁 전체 새로고침 방식 — 1차필터는 고유 ID가 없어 증분 동기화 시 중복이 생기므로,
+      매 실행마다 <b>비우고 다시 적재</b>해 시트와 DB를 정확히 일치시킵니다.
+    </div>
+  </div>
+</section>
+
+<!-- 3.5 전체 순서도 -->
+<section>
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="sec-num">ARCHITECTURE</span>
+      <h2>전체 데이터 흐름 (순서도)</h2>
+      <p class="lead">입력부터 대시보드까지, 현재 작동 중인 핵심 파이프라인 전체 구조입니다.</p>
+    </div>
+    <figure class="flow">
+      <img src="flowchart/process_flow_done.jpg" alt="티머니 고객센터 전화접수 자동화 완료분 순서도" />
+      <figcaption>Google Sheet → GAS 전체새로고침 적재 → Supabase SQL 집계 → Vercel 대시보드 + GitHub 자동배포</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- 4. 실제 화면 / KPI -->
+<section>
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="sec-num">DASHBOARD</span>
+      <h2>실제 대시보드 화면</h2>
+      <p class="lead">일·주·월 탭을 전환하며 총합계·필터율과 부서/유형/상태별 분해를 바로 확인합니다.</p>
+    </div>
+    <div class="dash">
+      <div class="bar">
+        <span class="dot" style="background:#ef4444"></span>
+        <span class="dot" style="background:#f59e0b"></span>
+        <span class="dot" style="background:#22c55e"></span>
+        <span class="url">csp-insight.vercel.app/?period=daily</span>
+      </div>
+      <div class="tabs">
+        <span class="t on">일간</span>
+        <span class="t">주간</span>
+        <span class="t">월간</span>
+      </div>
+      <div class="kpi">
+        <div class="k"><div class="v">4,750</div><div class="l">총합계 (1차+2차+현장인계)</div></div>
+        <div class="k"><div class="v">684</div><div class="l">1차필터 (전화상담)</div></div>
+        <div class="k"><div class="v">359</div><div class="l">2차필터 (2차 미출동)</div></div>
+        <div class="k"><div class="v accent">22.0%</div><div class="l">필터링율 (1차+2차)/총합</div></div>
+      </div>
+    </div>
+    <div class="note">
+      📊 화면 구성 — 상단 KPI 카드, 주차 선택 탭, <b>배정부서 · 상담유형(대) · 처리상태</b>별 분해 차트(1차필터 기준),
+      월간 추이 그래프로 이루어집니다. 현장인계(3,707건)는 필터 집계에서 제외됩니다.
+    </div>
+  </div>
+</section>
+
+<!-- 5. 기대효과 -->
+<section>
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="sec-num">04 — IMPACT</span>
+      <h2>기대 효과</h2>
+      <p class="lead">반복 수작업을 없애고, 누가 보든 같은 신뢰할 수 있는 숫자를 실시간으로 제공합니다.</p>
+    </div>
+    <div class="grid grid-2">
+      <div class="card">
+        <span class="ic">⏱️</span>
+        <h3>집계 시간 제로화</h3>
+        <p>매주 반복하던 수기 집계가 사라지고, 시트 입력 후 10분이면 대시보드에 자동 반영됩니다.</p>
+      </div>
+      <div class="card">
+        <span class="ic">✅</span>
+        <h3>일관된 통계</h3>
+        <p>"현장인계 제외", 주차 기준(목~수) 같은 규칙을 SQL에 고정해 사람·시점이 달라도 같은 숫자가 나옵니다.</p>
+      </div>
+      <div class="card">
+        <span class="ic">📈</span>
+        <h3>한눈에 보는 추이</h3>
+        <p>주차·월 단위 필터링율과 부서/유형/상태별 분해를 웹에서 즉시 확인해 의사결정이 빨라집니다.</p>
+      </div>
+      <div class="card">
+        <span class="ic">🔒</span>
+        <h3>개인정보 보호</h3>
+        <p>차량번호·차량ID는 마스킹, 요청자명·카드번호는 미저장. 읽기는 anon 키로 집계 뷰만 노출합니다.</p>
+      </div>
+    </div>
+
+    <div class="stats" style="margin-top:24px">
+      <div class="stat"><div class="num">4,750</div><div class="lbl">총 접수 건수</div></div>
+      <div class="stat"><div class="num">22.0%</div><div class="lbl">필터링율</div></div>
+      <div class="stat"><div class="num">10분</div><div class="lbl">자동 반영 주기</div></div>
+      <div class="stat"><div class="num">0건</div><div class="lbl">수기 집계 작업</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 6. 기술 -->
+<section>
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="sec-num">05 — STACK</span>
+      <h2>사용 기술</h2>
+    </div>
+    <div class="chips">
+      <span class="chip">Next.js 14 (App Router)</span>
+      <span class="chip">TypeScript</span>
+      <span class="chip">Supabase (PostgreSQL)</span>
+      <span class="chip">SQL View · Function 집계</span>
+      <span class="chip">Google Apps Script (GAS)</span>
+      <span class="chip">Google Sheets 입력</span>
+      <span class="chip">Vercel 배포</span>
+      <span class="chip">GitHub 자동배포</span>
+      <span class="chip">RLS (anon 읽기전용)</span>
+    </div>
+    <div class="note">
+      🔒 보안·운영 — 읽기는 anon 키로 집계 뷰만, 쓰기(적재)는 service_role 키로 분리합니다.
+      코드를 GitHub에 푸시하면 Vercel이 자동으로 재배포합니다.
+    </div>
+  </div>
+</section>
+
+<footer>
+  <b>ATEC Mobility</b> · 고객센터 전화접수 현황 대시보드 (CSP Insight)<br />
+  제작 김준영 (에이텍모빌리티) · 2026.06
+</footer>
+
+</body>
+</html>
