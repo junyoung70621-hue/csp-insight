@@ -3,7 +3,7 @@ import {
   getRecontact, getTopErr, getDeviceModels, supabaseConfigured,
   type TotalSummary, type KeyCount, type WeeklySummary,
 } from '@/lib/supabase';
-import CsvUpload from '@/components/CsvUpload';
+import UploadModal from '@/components/UploadModal';
 import MailButton from '@/components/MailButton';
 import LineChart from '@/components/LineChart';
 import WeekSelect from '@/components/WeekSelect';
@@ -120,7 +120,7 @@ export default async function Page({ searchParams }: { searchParams: { period?: 
     <main className="container">
       <div className="header header-row">
         <div><h1>📞 고객센터 전화접수 현황</h1><p>집계는 Supabase View · 화면 직접 조회 · PII 마스킹</p></div>
-        <MailButton />
+        <div className="header-actions"><UploadModal /><MailButton /></div>
       </div>
 
       {/* 1) 총 누적현황 KPI (클릭 → 로우데이터) */}
@@ -194,12 +194,6 @@ export default async function Page({ searchParams }: { searchParams: { period?: 
         </div>
       </div>
 
-      {/* 7) 업로드 */}
-      <div className="card">
-        <h2>⬆️ CSV 업로드</h2>
-        <div className="upload-2col"><CsvUpload sheet="1차필터" /><CsvUpload sheet="2차필터" /></div>
-        <div className="upload-hint">선택한 시트 맨 아래에 추가됩니다. 집계는 자동 동기화 주기에 맞춰 반영돼요.</div>
-      </div>
     </main>
   );
 }
