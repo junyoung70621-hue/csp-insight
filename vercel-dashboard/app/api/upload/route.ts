@@ -31,6 +31,32 @@ async function getSheetsToken(): Promise<string> {
   return token;
 }
 
+// 설정 점검용(쓰기 없음): env / 서비스계정 인증 / 시트 공유 여부 확인
+export async function GET() {
+  const sheetId = process.env.SHEET_ID;
+  const has = {
+    SHEET_ID: !!sheetId,
+    GOOGLE_CLIENT_EMAIL: !!process.env.GOOGLE_CLIENT_EMAIL,
+    GOOGLE_PRIVATE_KEY: !!process.env.GOOGLE_PRIVATE_KEY,
+  };
+  if (!has.SHEET_ID || !has.GOOGLE_CLIENT_EMAIL || !has.GOOGLE_PRIVATE_KEY) {
+    return NextResponse.json({ ok: false, error: '환경변수 미설정', has }, { status: 500 });
+  }
+  try {
+    const token = await getSheetsToken();
+    const base = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}`;
+    const tabs: Record<string, unknown> = {};
+    for (const tab of ['1차필터', '2차필터']) {
+      const r = await fetch(`${base}/values/${encodeURIComponent(tab)}!1:1`, { headers: { Authorization: `Bearer ${token}` } });
+      const j = await r.json();
+      tabs[tab] = r.ok ? { headerCols: (j.values?.[0] || []).length } : { error: j.error?.message || 'fail' };
+    }
+    return NextResponse.json({ ok: true, tabs });
+  } catch (e: any) {
+    return NextResponse.json({ ok: false, error: e?.message || String(e) }, { status: 500 });
+  }
+}
+
 export async function POST(req: NextRequest) {
   const sheetId = process.env.SHEET_ID;
   if (!sheetId || !process.env.GOOGLE_CLIENT_EMAIL || !process.env.GOOGLE_PRIVATE_KEY) {
