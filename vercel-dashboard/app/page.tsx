@@ -1,11 +1,12 @@
 import {
   getTotalSummary, getWeeklySummaries, getMonthlySummaries, getDailySummaries,
-  getRecontact, getTopErr, getDeviceModels, getLatestInsight, supabaseConfigured,
-  type TotalSummary, type KeyCount, type Recontact, type Insight,
+  getRecontact, getTopErr, getDeviceModels, supabaseConfigured,
+  type TotalSummary, type KeyCount, type Recontact, type WeeklySummary,
 } from '@/lib/supabase';
 import CsvUpload from '@/components/CsvUpload';
 import MailButton from '@/components/MailButton';
 import LineChart from '@/components/LineChart';
+import WeekSelect from '@/components/WeekSelect';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -25,12 +26,7 @@ function TotalCards({ t }: { t: TotalSummary }) {
   return (
     <div className="kpi-grid kpi-grid-5">
       {cells.map((c) => {
-        const inner = (
-          <>
-            <div className="num">{c.val}</div>
-            <div className="lbl">{c.label}{c.href ? ' ↗' : ''}</div>
-          </>
-        );
+        const inner = <><div className="num">{c.val}</div><div className="lbl">{c.label}{c.href ? ' ↗' : ''}</div></>;
         return c.href
           ? <a key={c.label} className={`kpi kpi-link${c.accent ? ' accent' : ''}`} href={c.href}>{inner}</a>
           : <div key={c.label} className={`kpi${c.accent ? ' accent' : ''}`}>{inner}</div>;
@@ -59,24 +55,27 @@ function BarList({ title, rows, color = 'var(--brand)' }: { title: string; rows:
   );
 }
 
-function InsightPanel({ ins }: { ins: Insight | null }) {
-  const badge = ins?.ai_source === 'gemini' ? 'Gemini' : ins?.ai_source === 'fallback' ? '규칙기반' : '대기';
+function InsightPanel({ s, weeks }: { s?: WeeklySummary; weeks: WeeklySummary[] }) {
+  const badge = s?.ai_source === 'gemini' ? 'Gemini' : s?.ai_source === 'fallback' ? '규칙기반' : '대기';
   return (
     <div className="card ai-box" style={{ height: '100%' }}>
-      <h2>🧠 AI 요약 <span className="badge">{badge}{ins ? ` · ${ins.week_label}` : ''}</span></h2>
-      {ins?.ai_summary ? (
+      <div className="ai-head">
+        <h2 style={{ margin: 0 }}>🧠 AI 요약 <span className="badge">{badge}</span></h2>
+        <WeekSelect weeks={weeks.map((w) => ({ week_label: w.week_label, total: w.total }))} selected={s?.week_label || ''} />
+      </div>
+      {s?.ai_summary ? (
         <>
-          <p style={{ lineHeight: 1.7, margin: 0, fontSize: 14 }}>{ins.ai_summary}</p>
-          {(ins.ai_highlights?.length ?? 0) > 0 && (
+          <p style={{ lineHeight: 1.7, margin: '10px 0 0', fontSize: 14 }}>{s.ai_summary}</p>
+          {(s.ai_highlights?.length ?? 0) > 0 && (
             <><h3 style={{ margin: '14px 0 4px', fontSize: 14 }}>특이사항</h3>
-            <ul style={{ margin: 0, paddingLeft: 18 }}>{ins.ai_highlights!.map((h, i) => <li key={i} style={{ fontSize: 13, lineHeight: 1.6 }}>{h}</li>)}</ul></>
+            <ul style={{ margin: 0, paddingLeft: 18 }}>{s.ai_highlights!.map((h, i) => <li key={i} style={{ fontSize: 13, lineHeight: 1.6 }}>{h}</li>)}</ul></>
           )}
-          {(ins.ai_suggestions?.length ?? 0) > 0 && (
+          {(s.ai_suggestions?.length ?? 0) > 0 && (
             <><h3 style={{ margin: '14px 0 4px', fontSize: 14 }}>개선 제안</h3>
-            <ul style={{ margin: 0, paddingLeft: 18 }}>{ins.ai_suggestions!.map((h, i) => <li key={i} style={{ fontSize: 13, lineHeight: 1.6 }}>{h}</li>)}</ul></>
+            <ul style={{ margin: 0, paddingLeft: 18 }}>{s.ai_suggestions!.map((h, i) => <li key={i} style={{ fontSize: 13, lineHeight: 1.6 }}>{h}</li>)}</ul></>
           )}
         </>
-      ) : <p style={{ color: 'var(--muted)', fontSize: 13 }}>아직 생성된 요약이 없습니다. (GAS runDaily 실행 시 생성)</p>}
+      ) : <p style={{ color: 'var(--muted)', fontSize: 13, marginTop: 10 }}>이 주차의 요약이 아직 없습니다. (GAS runDaily 가 해당 주차 실행 시 생성)</p>}
     </div>
   );
 }
@@ -91,20 +90,25 @@ async function fetchPeriod(period: Period, limit: number, offset: number) {
   return (await getWeeklySummaries(limit, offset)).map((w) => ({ label: w.week_label, ...w }));
 }
 
-export default async function Page({ searchParams }: { searchParams: { period?: string; page?: string } }) {
+export default async function Page({ searchParams }: { searchParams: { period?: string; page?: string; week?: string } }) {
   if (!supabaseConfigured) {
     return <main className="container"><div className="header"><h1>📞 고객센터 전화접수 현황</h1></div><div className="card empty">Supabase 환경변수가 설정되지 않았습니다.</div></main>;
   }
   const period: Period = searchParams.period === 'daily' || searchParams.period === 'monthly' ? searchParams.period : 'weekly';
   const page = Math.max(0, parseInt(searchParams.page || '0', 10) || 0);
 
-  const [total, daily, recon, topErr, devices, insight, latestArr, trend] = await Promise.all([
+  const [total, daily, recon, topErr, devices, weeks, trend] = await Promise.all([
     getTotalSummary(), getDailySummaries(45, 0), getRecontact(), getTopErr(5), getDeviceModels(),
-    getLatestInsight(), fetchPeriod(period, 1, 0), fetchPeriod(period, TREND_SIZE, page * TREND_SIZE),
+    getWeeklySummaries(52, 0), fetchPeriod(period, TREND_SIZE, page * TREND_SIZE),
   ]);
-  const latest = latestArr[0];
+
+  const selWeek = weeks.find((w) => w.week_label === searchParams.week)
+    || weeks.find((w) => w.ai_summary) || weeks[0];
+  const latest = trend[0];
   const chartPoints = [...daily].reverse().map((d) => ({ label: d.day, value: d.total }));
-  const mk = (p: number) => `/?period=${period}&page=${p}`;
+  const wk = selWeek ? `&week=${encodeURIComponent(selWeek.week_label)}` : '';
+  const periodHref = (p: Period) => `/?period=${p}${wk}`;
+  const pageHref = (n: number) => `/?period=${period}&page=${n}${wk}`;
 
   return (
     <main className="container">
@@ -113,21 +117,19 @@ export default async function Page({ searchParams }: { searchParams: { period?: 
         <MailButton />
       </div>
 
-      {/* 총 누적현황 KPI (클릭 → 로우데이터) */}
       {total && <TotalCards t={total} />}
 
-      {/* 그래프 + AI 요약 */}
       <div className="grid-chart">
         <div className="card">
           <h2>📈 일자별 접수현황 (전체)</h2>
           <LineChart points={chartPoints} />
         </div>
-        <InsightPanel ins={insight} />
+        <InsightPanel s={selWeek} weeks={weeks} />
       </div>
 
       {recon && (
         <div className="card">
-          <h2>🔁 재접수율 <span className="badge">동일차량·동일유형 3일내</span></h2>
+          <h2>🔁 재접수율 <span className="badge">동일차량·3일내 (1차: 차량+날짜 / 2차: 차량+유형)</span></h2>
           <div className="recon-grid">
             <div className="recon-cell"><div className="recon-rate">{recon.l1_rate}%</div><div className="recon-lbl">1차필터 재접수</div><div className="recon-sub">{recon.l1_recontact.toLocaleString()} / {recon.l1_total.toLocaleString()}건</div></div>
             <div className="recon-cell"><div className="recon-rate">{recon.l2_rate}%</div><div className="recon-lbl">2차필터 재접수</div><div className="recon-sub">{recon.l2_recontact.toLocaleString()} / {recon.l2_total.toLocaleString()}건</div></div>
@@ -140,10 +142,9 @@ export default async function Page({ searchParams }: { searchParams: { period?: 
         <BarList title="📟 기종별 누적" rows={devices.map((d) => ({ key: d.model, count: d.count }))} color="#7c3aed" />
       </div>
 
-      {/* 기간 탭 + 추이(페이지 넘김) */}
       <div className="period-tabs">
         {(['daily', 'weekly', 'monthly'] as Period[]).map((p) => (
-          <a key={p} href={`/?period=${p}`} className={`period-tab ${p === period ? 'active' : ''}`}>{PERIOD_LABEL[p]}</a>
+          <a key={p} href={periodHref(p)} className={`period-tab ${p === period ? 'active' : ''}`}>{PERIOD_LABEL[p]}</a>
         ))}
       </div>
 
@@ -171,13 +172,12 @@ export default async function Page({ searchParams }: { searchParams: { period?: 
           </tbody>
         </table>
         <div className="pager">
-          {page > 0 ? <a className="period-tab" href={mk(page - 1)}>← 최근</a> : <span className="period-tab disabled">← 최근</span>}
+          {page > 0 ? <a className="period-tab" href={pageHref(page - 1)}>← 최근</a> : <span className="period-tab disabled">← 최근</span>}
           <span className="pager-info">페이지 {page + 1}</span>
-          {trend.length === TREND_SIZE ? <a className="period-tab" href={mk(page + 1)}>이전 기간 →</a> : <span className="period-tab disabled">이전 기간 →</span>}
+          {trend.length === TREND_SIZE ? <a className="period-tab" href={pageHref(page + 1)}>이전 기간 →</a> : <span className="period-tab disabled">이전 기간 →</span>}
         </div>
       </div>
 
-      {/* 업로드 (하단) */}
       <div className="card">
         <h2>⬆️ CSV 업로드</h2>
         <div className="upload-2col"><CsvUpload sheet="1차필터" /><CsvUpload sheet="2차필터" /></div>
