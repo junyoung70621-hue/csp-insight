@@ -37,6 +37,25 @@ function supabaseUpsert_(table, rows, onConflict) {
   }
 }
 
+/** 테이블 전체 행 삭제(service_role, RLS 우회). 전체 새로고침용. @return {boolean} */
+function supabaseDeleteAll_(table) {
+  try {
+    const url = supabaseBase_() + table + '?row_key=not.is.null';   // 모든 행 매칭
+    const resp = UrlFetchApp.fetch(url, {
+      method: 'delete',
+      headers: Object.assign({}, supabaseHeaders_(), { Prefer: 'return=minimal' }),
+      muteHttpExceptions: true,
+    });
+    const code = resp.getResponseCode();
+    if (code >= 200 && code < 300) return true;
+    logEvent_('WARN', 'supabase', `${table} delete HTTP ${code}: ${resp.getContentText().slice(0, 200)}`);
+    return false;
+  } catch (e) {
+    logEvent_('ERROR', 'supabase', `${table} delete 예외: ${e && e.message}`);
+    return false;
+  }
+}
+
 /** GET select. @param {string} query  PostgREST 쿼리스트링(앞에 ? 제외) @return {Array} */
 function supabaseSelect_(table, query) {
   try {
