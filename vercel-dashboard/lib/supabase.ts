@@ -43,6 +43,27 @@ export interface MonthlySummary {
   avg_days: number;
 }
 
+export interface TotalSummary {
+  total: number;
+  first_filter: number;
+  second_filter: number;
+  handover: number;
+  filter_rate: number;
+  handover_rate: number;
+  avg_days: number;
+}
+
+/** 총 누적현황(전체 기간 1행) */
+export async function getTotalSummary(): Promise<TotalSummary | null> {
+  if (!supabase) return null;
+  const { data, error } = await supabase.from('cs_v_total_summary').select('*').limit(1);
+  if (error) {
+    console.error('getTotalSummary:', error.message);
+    return null;
+  }
+  return (data && data[0]) ? (data[0] as TotalSummary) : null;
+}
+
 /** 주차 통합 요약(집계 + 분해 + AI) — 최신 주차부터 */
 export async function getWeeklySummaries(limit = 12): Promise<WeeklySummary[]> {
   if (!supabase) return [];

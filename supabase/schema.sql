@@ -86,73 +86,103 @@ create table if not exists public.cs_weekly_insight (
 --   (값 표기가 바뀌면 아래 뷰들의 lower(trim(second_filter))='현장인계' 부분만 수정)
 
 -- ── 3. 기간별 요약 View (일/주/월) — L1+L2 결합 ──────────────────
+-- [집계 공식 v4]
+--   1차 = cs_l1 행수(전화상담 전체, 필터됨)
+--   2차 = cs_l2 중 second_filter='2차 미출동' (필터됨)
+--   현장인계 = cs_l2 중 second_filter='현장인계' (필터 안 됨)
+--   총합계 = 1차 + 2차 + 현장인계   (그 외 second_filter 값은 제외)
+--   필터율 = (1차 + 2차) / 총합계
+--   ※ '현장인계'/'2차 미출동' 표기가 바뀌면 아래 regexp_replace 비교문자열만 수정
 create or replace view public.cs_v_weekly_summary as
 with l1 as (
-  select public.cs_week_label(received_at) wk, count(*) c
+  select public.cs_week_label(received_at) k, count(*) c
   from public.cs_l1 where received_at is not null group by 1
 ),
 l2 as (
-  select public.cs_week_label(received_at) wk, count(*) c,
-    count(*) filter (where lower(trim(second_filter))='현장인계') h,
+  select public.cs_week_label(received_at) k,
+    count(*) filter (where regexp_replace(trim(second_filter),'\s+',' ','g')='2차 미출동') s,
+    count(*) filter (where regexp_replace(trim(second_filter),'\s+',' ','g')='현장인계') h,
     round(coalesce(avg(case when done_at is not null and done_at>=received_at
+          and regexp_replace(trim(second_filter),'\s+',' ','g') in ('2차 미출동','현장인계')
           then extract(epoch from (done_at-received_at))/86400.0 end),0)::numeric,1) avgd
   from public.cs_l2 where received_at is not null group by 1
 ),
-wks as (select wk from l1 union select wk from l2)
-select w.wk as week_label,
-  coalesce(l1.c,0)+coalesce(l2.c,0)                       as total,
-  coalesce(l1.c,0)                                        as first_filter,
-  coalesce(l2.c,0)                                        as second_filter,
-  coalesce(l2.h,0)                                        as handover,
-  case when (coalesce(l1.c,0)+coalesce(l2.c,0))=0 then 0
-       else round((coalesce(l1.c,0)+coalesce(l2.c,0)-coalesce(l2.h,0))*100.0
-                  /(coalesce(l1.c,0)+coalesce(l2.c,0)),1) end as filter_rate,
-  case when (coalesce(l1.c,0)+coalesce(l2.c,0))=0 then 0
-       else round(coalesce(l2.h,0)*100.0/(coalesce(l1.c,0)+coalesce(l2.c,0)),1) end as handover_rate,
-  coalesce(l2.avgd,0)                                     as avg_days
-from wks w left join l1 on l1.wk=w.wk left join l2 on l2.wk=w.wk;
+ks as (select k from l1 union select k from l2)
+select x.k as week_label,
+  coalesce(l1.c,0)+coalesce(l2.s,0)+coalesce(l2.h,0)       as total,
+  coalesce(l1.c,0)                                         as first_filter,
+  coalesce(l2.s,0)                                         as second_filter,
+  coalesce(l2.h,0)                                         as handover,
+  case when (coalesce(l1.c,0)+coalesce(l2.s,0)+coalesce(l2.h,0))=0 then 0
+       else round((coalesce(l1.c,0)+coalesce(l2.s,0))*100.0
+                  /(coalesce(l1.c,0)+coalesce(l2.s,0)+coalesce(l2.h,0)),1) end as filter_rate,
+  case when (coalesce(l1.c,0)+coalesce(l2.s,0)+coalesce(l2.h,0))=0 then 0
+       else round(coalesce(l2.h,0)*100.0/(coalesce(l1.c,0)+coalesce(l2.s,0)+coalesce(l2.h,0)),1) end as handover_rate,
+  coalesce(l2.avgd,0)                                      as avg_days
+from ks x left join l1 on l1.k=x.k left join l2 on l2.k=x.k;
 
 create or replace view public.cs_v_daily_summary as
 with l1 as (
-  select (received_at at time zone 'Asia/Seoul')::date d, count(*) c
+  select (received_at at time zone 'Asia/Seoul')::date k, count(*) c
   from public.cs_l1 where received_at is not null group by 1
 ),
 l2 as (
-  select (received_at at time zone 'Asia/Seoul')::date d, count(*) c,
-    count(*) filter (where lower(trim(second_filter))='현장인계') h,
+  select (received_at at time zone 'Asia/Seoul')::date k,
+    count(*) filter (where regexp_replace(trim(second_filter),'\s+',' ','g')='2차 미출동') s,
+    count(*) filter (where regexp_replace(trim(second_filter),'\s+',' ','g')='현장인계') h,
     round(coalesce(avg(case when done_at is not null and done_at>=received_at
+          and regexp_replace(trim(second_filter),'\s+',' ','g') in ('2차 미출동','현장인계')
           then extract(epoch from (done_at-received_at))/86400.0 end),0)::numeric,1) avgd
   from public.cs_l2 where received_at is not null group by 1
 ),
-ds as (select d from l1 union select d from l2)
-select x.d as day,
-  coalesce(l1.c,0)+coalesce(l2.c,0) as total,
-  coalesce(l1.c,0) as first_filter, coalesce(l2.c,0) as second_filter, coalesce(l2.h,0) as handover,
-  case when (coalesce(l1.c,0)+coalesce(l2.c,0))=0 then 0
-       else round((coalesce(l1.c,0)+coalesce(l2.c,0)-coalesce(l2.h,0))*100.0/(coalesce(l1.c,0)+coalesce(l2.c,0)),1) end as filter_rate,
+ks as (select k from l1 union select k from l2)
+select x.k as day,
+  coalesce(l1.c,0)+coalesce(l2.s,0)+coalesce(l2.h,0) as total,
+  coalesce(l1.c,0) as first_filter, coalesce(l2.s,0) as second_filter, coalesce(l2.h,0) as handover,
+  case when (coalesce(l1.c,0)+coalesce(l2.s,0)+coalesce(l2.h,0))=0 then 0
+       else round((coalesce(l1.c,0)+coalesce(l2.s,0))*100.0/(coalesce(l1.c,0)+coalesce(l2.s,0)+coalesce(l2.h,0)),1) end as filter_rate,
   coalesce(l2.avgd,0) as avg_days
-from ds x left join l1 on l1.d=x.d left join l2 on l2.d=x.d;
+from ks x left join l1 on l1.k=x.k left join l2 on l2.k=x.k;
 
 create or replace view public.cs_v_monthly_summary as
 with l1 as (
-  select to_char((received_at at time zone 'Asia/Seoul'),'YYYY-MM') m, count(*) c
+  select to_char((received_at at time zone 'Asia/Seoul'),'YYYY-MM') k, count(*) c
   from public.cs_l1 where received_at is not null group by 1
 ),
 l2 as (
-  select to_char((received_at at time zone 'Asia/Seoul'),'YYYY-MM') m, count(*) c,
-    count(*) filter (where lower(trim(second_filter))='현장인계') h,
+  select to_char((received_at at time zone 'Asia/Seoul'),'YYYY-MM') k,
+    count(*) filter (where regexp_replace(trim(second_filter),'\s+',' ','g')='2차 미출동') s,
+    count(*) filter (where regexp_replace(trim(second_filter),'\s+',' ','g')='현장인계') h,
     round(coalesce(avg(case when done_at is not null and done_at>=received_at
+          and regexp_replace(trim(second_filter),'\s+',' ','g') in ('2차 미출동','현장인계')
           then extract(epoch from (done_at-received_at))/86400.0 end),0)::numeric,1) avgd
   from public.cs_l2 where received_at is not null group by 1
 ),
-ms as (select m from l1 union select m from l2)
-select x.m as month,
-  coalesce(l1.c,0)+coalesce(l2.c,0) as total,
-  coalesce(l1.c,0) as first_filter, coalesce(l2.c,0) as second_filter, coalesce(l2.h,0) as handover,
-  case when (coalesce(l1.c,0)+coalesce(l2.c,0))=0 then 0
-       else round((coalesce(l1.c,0)+coalesce(l2.c,0)-coalesce(l2.h,0))*100.0/(coalesce(l1.c,0)+coalesce(l2.c,0)),1) end as filter_rate,
+ks as (select k from l1 union select k from l2)
+select x.k as month,
+  coalesce(l1.c,0)+coalesce(l2.s,0)+coalesce(l2.h,0) as total,
+  coalesce(l1.c,0) as first_filter, coalesce(l2.s,0) as second_filter, coalesce(l2.h,0) as handover,
+  case when (coalesce(l1.c,0)+coalesce(l2.s,0)+coalesce(l2.h,0))=0 then 0
+       else round((coalesce(l1.c,0)+coalesce(l2.s,0))*100.0/(coalesce(l1.c,0)+coalesce(l2.s,0)+coalesce(l2.h,0)),1) end as filter_rate,
   coalesce(l2.avgd,0) as avg_days
-from ms x left join l1 on l1.m=x.m left join l2 on l2.m=x.m;
+from ks x left join l1 on l1.k=x.k left join l2 on l2.k=x.k;
+
+-- 총 누적현황 (전체 기간 1행)
+create or replace view public.cs_v_total_summary as
+with l1 as (select count(*) c from public.cs_l1),
+l2 as (
+  select count(*) filter (where regexp_replace(trim(second_filter),'\s+',' ','g')='2차 미출동') s,
+         count(*) filter (where regexp_replace(trim(second_filter),'\s+',' ','g')='현장인계') h,
+         round(coalesce(avg(case when done_at is not null and done_at>=received_at
+               and regexp_replace(trim(second_filter),'\s+',' ','g') in ('2차 미출동','현장인계')
+               then extract(epoch from (done_at-received_at))/86400.0 end),0)::numeric,1) avgd
+  from public.cs_l2
+)
+select (l1.c+l2.s+l2.h) as total, l1.c as first_filter, l2.s as second_filter, l2.h as handover,
+  case when (l1.c+l2.s+l2.h)=0 then 0 else round((l1.c+l2.s)*100.0/(l1.c+l2.s+l2.h),1) end as filter_rate,
+  case when (l1.c+l2.s+l2.h)=0 then 0 else round(l2.h*100.0/(l1.c+l2.s+l2.h),1) end as handover_rate,
+  l2.avgd as avg_days
+from l1 cross join l2;
 
 -- ── 4. 주간 항목별 분해 View (1차필터=전화상담 기준) ─────────────
 create or replace view public.cs_v_weekly_by_dept as
@@ -188,5 +218,5 @@ alter table public.cs_weekly_insight enable row level security;
 grant select on
   public.cs_v_weekly_summary, public.cs_v_daily_summary, public.cs_v_monthly_summary,
   public.cs_v_weekly_by_dept, public.cs_v_weekly_by_type, public.cs_v_weekly_by_status,
-  public.cs_v_weekly_full
+  public.cs_v_weekly_full, public.cs_v_total_summary
 to anon, authenticated;

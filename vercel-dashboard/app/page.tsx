@@ -1,6 +1,6 @@
 import {
-  getWeeklySummaries, getMonthlySummaries, supabaseConfigured,
-  type Breakdown, type WeeklySummary, type MonthlySummary,
+  getWeeklySummaries, getMonthlySummaries, getTotalSummary, supabaseConfigured,
+  type Breakdown, type WeeklySummary, type MonthlySummary, type TotalSummary,
 } from '@/lib/supabase';
 import WeekSelect from '@/components/WeekSelect';
 
@@ -69,6 +69,29 @@ function AiBox({ s }: { s: WeeklySummary }) {
   );
 }
 
+function TotalCard({ t }: { t: TotalSummary }) {
+  const cells: [string, string][] = [
+    ['1차 필터', `${t.first_filter.toLocaleString()}`],
+    ['2차 필터', `${t.second_filter.toLocaleString()}`],
+    ['현장인계', `${t.handover.toLocaleString()}`],
+    ['총 합계', `${t.total.toLocaleString()}`],
+    ['필터율', `${t.filter_rate}%`],
+  ];
+  return (
+    <div className="card total-card">
+      <h2>📊 총 누적현황</h2>
+      <div className="total-grid">
+        {cells.map(([label, val], i) => (
+          <div key={label} className={`total-cell${i === cells.length - 1 ? ' accent' : ''}`}>
+            <div className="total-val">{val}</div>
+            <div className="total-lbl">{label}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function MonthlyTrend({ rows }: { rows: MonthlySummary[] }) {
   if (!rows.length) return null;
   const asc = [...rows].reverse();
@@ -114,9 +137,10 @@ export default async function Page({ searchParams }: { searchParams: { week?: st
     );
   }
 
-  const [summaries, monthly] = await Promise.all([
+  const [summaries, monthly, total] = await Promise.all([
     getWeeklySummaries(12),
     getMonthlySummaries(6),
+    getTotalSummary(),
   ]);
 
   if (summaries.length === 0) {
@@ -140,6 +164,8 @@ export default async function Page({ searchParams }: { searchParams: { week?: st
         <h1>📞 고객센터 전화접수 현황</h1>
         <p>집계 주차(목~수) · 집계는 Supabase View, 화면은 직접 조회 · PII 마스킹</p>
       </div>
+
+      {total && <TotalCard t={total} />}
 
       <div className="week-bar">
         <span className="week-bar-label">주차 선택</span>

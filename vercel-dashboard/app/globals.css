@@ -82,5 +82,17 @@ td.num, th.num { text-align: right; }
   font-size: 13px; border-radius: 8px; padding: 10px 14px; margin-bottom: 16px;
 }
 
+.total-card { background: linear-gradient(180deg,#f8fbff,#fff); }
+.total-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+@media (max-width: 720px) { .total-grid { grid-template-columns: repeat(3, 1fr); } }
+.total-cell {
+  text-align: center; padding: 14px 8px; border: 1px solid var(--border);
+  border-radius: 10px; background: var(--card);
+}
+.total-cell.accent { background: var(--brand-soft); border-color: #bfdbfe; }
+.total-val { font-size: 22px; font-weight: 700; color: #111827; }
+.total-cell.accent .total-val { color: var(--brand); }
+.total-lbl { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
 .empty { text-align: center; color: var(--muted); padding: 48px 0; }
 .foot { color: var(--muted); font-size: 12px; margin-top: 28px; }
