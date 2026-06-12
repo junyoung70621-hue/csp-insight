@@ -135,7 +135,7 @@ export default async function Page({ searchParams }: { searchParams: { period?: 
       {/* 3) 일자별 접수현황 (월 선택) */}
       <div className="card">
         <div className="ai-head">
-          <h2 style={{ margin: 0 }}>📈 일자별 접수현황</h2>
+          <h2 style={{ margin: 0 }}>📈 일자별 전화접수현황(전체)</h2>
           <MonthSelect months={monthOpts} selected={month} />
         </div>
         <div style={{ marginTop: 10 }}>
