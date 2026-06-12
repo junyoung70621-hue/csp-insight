@@ -3,6 +3,7 @@ import {
   type Breakdown, type WeeklySummary, type MonthlySummary, type TotalSummary,
 } from '@/lib/supabase';
 import WeekSelect from '@/components/WeekSelect';
+import CsvUpload from '@/components/CsvUpload';
 
 export const dynamic = 'force-dynamic';   // 항상 최신(View 직접 조회)
 export const revalidate = 0;
@@ -147,7 +148,8 @@ export default async function Page({ searchParams }: { searchParams: { week?: st
     return (
       <main className="container">
         <div className="header"><h1>📞 고객센터 전화접수 현황</h1></div>
-        <div className="card empty">아직 집계된 주차 데이터가 없습니다.</div>
+        <CsvUpload />
+        <div className="card empty">아직 집계된 주차 데이터가 없습니다. 위에서 CSV를 업로드하세요.</div>
       </main>
     );
   }
@@ -166,6 +168,8 @@ export default async function Page({ searchParams }: { searchParams: { week?: st
       </div>
 
       {total && <TotalCard t={total} />}
+
+      <CsvUpload />
 
       <div className="week-bar">
         <span className="week-bar-label">주차 선택</span>

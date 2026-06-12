@@ -94,5 +94,18 @@ td.num, th.num { text-align: right; }
 .total-cell.accent .total-val { color: var(--brand); }
 .total-lbl { font-size: 12px; color: var(--muted); margin-top: 4px; }
 
+.upload-card { border-color: #c7d2fe; }
+.upload-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.upload-row input[type=file] { font-size: 13px; }
+.upload-btn {
+  font-size: 14px; font-weight: 600; padding: 8px 18px; border-radius: 8px;
+  border: none; background: var(--brand); color: #fff; cursor: pointer;
+}
+.upload-btn:disabled { opacity: .6; cursor: default; }
+.upload-msg { margin-top: 10px; font-size: 13px; padding: 8px 12px; border-radius: 6px; }
+.upload-msg.ok { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+.upload-msg.err { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+.upload-hint { margin-top: 8px; font-size: 12px; color: var(--muted); }
+
 .empty { text-align: center; color: var(--muted); padding: 48px 0; }
 .foot { color: var(--muted); font-size: 12px; margin-top: 28px; }
