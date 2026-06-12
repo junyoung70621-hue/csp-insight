@@ -72,11 +72,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: '파일/시트를 확인하세요.' }, { status: 400 });
     }
 
-    const csvText = decodeCsv(Buffer.from(await file.arrayBuffer())).trim();
-    const parsed = Papa.parse<string[]>(csvText, { skipEmptyLines: true });
-    const rows = (parsed.data as unknown as string[][]) || [];
+    const buf = Buffer.from(await file.arrayBuffer());
+    const name = (file.name || '').toLowerCase();
+    let rows: string[][];
+    if (name.endsWith('.xlsx') || name.endsWith('.xls')) {
+      // xlsx → 첫 시트를 행 배열로 (날짜 등은 표시값 그대로)
+      const XLSX = await import('xlsx');
+      const wb = XLSX.read(buf, { type: 'buffer' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, defval: '' }) as string[][];
+    } else {
+      const csvText = decodeCsv(buf).trim();
+      rows = (Papa.parse<string[]>(csvText, { skipEmptyLines: true }).data as unknown as string[][]) || [];
+    }
+    rows = rows.filter((r) => Array.isArray(r) && r.some((c) => String(c ?? '').trim() !== ''));
     if (rows.length < 2) {
-      return NextResponse.json({ ok: false, error: '빈 CSV 또는 헤더만 있습니다.' }, { status: 400 });
+      return NextResponse.json({ ok: false, error: '빈 파일 또는 헤더만 있습니다.' }, { status: 400 });
     }
 
     const token = await getSheetsToken();

@@ -51,10 +51,10 @@ export default function UploadModal() {
                 <button className={sheet === '1차필터' ? 'seg-on' : ''} onClick={() => setSheet('1차필터')} disabled={busy}>1차필터</button>
                 <button className={sheet === '2차필터' ? 'seg-on' : ''} onClick={() => setSheet('2차필터')} disabled={busy}>2차필터</button>
               </div>
-              <input type="file" accept=".csv,text/csv" onChange={(e) => setFile(e.target.files?.[0] || null)} disabled={busy} />
+              <input type="file" accept=".csv,.xlsx,.xls,text/csv" onChange={(e) => setFile(e.target.files?.[0] || null)} disabled={busy} />
               <button className="upload-btn" onClick={submit} disabled={busy}>{busy ? '업로드 중…' : `${sheet} 업로드`}</button>
               {msg && <div className={`upload-msg ${msg.ok ? 'ok' : 'err'}`}>{msg.text}</div>}
-              <div className="upload-hint">선택한 시트 맨 아래에 추가됩니다. 집계(대시보드)는 자동 동기화 주기에 맞춰 반영돼요.</div>
+              <div className="upload-hint">CSV·XLSX 모두 업로드 가능(xlsx는 자동 변환). 선택한 시트 맨 아래에 추가되고, 집계는 자동 동기화 주기에 반영돼요.</div>
             </div>
           </div>
         </div>
