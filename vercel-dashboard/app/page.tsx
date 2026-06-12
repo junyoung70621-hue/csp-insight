@@ -1,12 +1,13 @@
 import {
-  getTotalSummary, getWeeklySummaries, getMonthlySummaries, getDailySummaries,
+  getTotalSummary, getWeeklySummaries, getMonthlySummaries, getDailySummaries, getDailyByMonth,
   getRecontact, getTopErr, getDeviceModels, supabaseConfigured,
-  type TotalSummary, type KeyCount, type Recontact, type WeeklySummary,
+  type TotalSummary, type KeyCount, type WeeklySummary,
 } from '@/lib/supabase';
 import CsvUpload from '@/components/CsvUpload';
 import MailButton from '@/components/MailButton';
 import LineChart from '@/components/LineChart';
 import WeekSelect from '@/components/WeekSelect';
+import MonthSelect from '@/components/MonthSelect';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -58,7 +59,7 @@ function BarList({ title, rows, color = 'var(--brand)' }: { title: string; rows:
 function InsightPanel({ s, weeks }: { s?: WeeklySummary; weeks: WeeklySummary[] }) {
   const badge = s?.ai_source === 'gemini' ? 'Gemini' : s?.ai_source === 'fallback' ? '규칙기반' : '대기';
   return (
-    <div className="card ai-box" style={{ height: '100%' }}>
+    <div className="card ai-box">
       <div className="ai-head">
         <h2 style={{ margin: 0 }}>🧠 AI 요약 <span className="badge">{badge}</span></h2>
         <WeekSelect weeks={weeks.map((w) => ({ week_label: w.week_label, total: w.total }))} selected={s?.week_label || ''} />
@@ -75,7 +76,7 @@ function InsightPanel({ s, weeks }: { s?: WeeklySummary; weeks: WeeklySummary[] 
             <ul style={{ margin: 0, paddingLeft: 18 }}>{s.ai_suggestions!.map((h, i) => <li key={i} style={{ fontSize: 13, lineHeight: 1.6 }}>{h}</li>)}</ul></>
           )}
         </>
-      ) : <p style={{ color: 'var(--muted)', fontSize: 13, marginTop: 10 }}>이 주차의 요약이 아직 없습니다. (GAS runDaily 가 해당 주차 실행 시 생성)</p>}
+      ) : <p style={{ color: 'var(--muted)', fontSize: 13, marginTop: 10 }}>이 주차의 요약이 아직 없습니다. (GAS backfillInsights 실행 시 생성)</p>}
     </div>
   );
 }
@@ -90,25 +91,30 @@ async function fetchPeriod(period: Period, limit: number, offset: number) {
   return (await getWeeklySummaries(limit, offset)).map((w) => ({ label: w.week_label, ...w }));
 }
 
-export default async function Page({ searchParams }: { searchParams: { period?: string; page?: string; week?: string } }) {
+export default async function Page({ searchParams }: { searchParams: { period?: string; page?: string; week?: string; month?: string } }) {
   if (!supabaseConfigured) {
     return <main className="container"><div className="header"><h1>📞 고객센터 전화접수 현황</h1></div><div className="card empty">Supabase 환경변수가 설정되지 않았습니다.</div></main>;
   }
   const period: Period = searchParams.period === 'daily' || searchParams.period === 'monthly' ? searchParams.period : 'weekly';
   const page = Math.max(0, parseInt(searchParams.page || '0', 10) || 0);
+  const kstNow = new Date(Date.now() + 9 * 3600 * 1000);
+  const currentMonth = kstNow.toISOString().slice(0, 7);
+  const month = /^\d{4}-\d{2}$/.test(searchParams.month || '') ? (searchParams.month as string) : currentMonth;
 
-  const [total, daily, recon, topErr, devices, weeks, trend] = await Promise.all([
-    getTotalSummary(), getDailySummaries(45, 0), getRecontact(), getTopErr(5), getDeviceModels(),
-    getWeeklySummaries(52, 0), fetchPeriod(period, TREND_SIZE, page * TREND_SIZE),
+  const [total, recon, topErr, devices, weeks, months, dailyMonth, trend] = await Promise.all([
+    getTotalSummary(), getRecontact(), getTopErr(5), getDeviceModels(),
+    getWeeklySummaries(52, 0), getMonthlySummaries(24, 0), getDailyByMonth(month),
+    fetchPeriod(period, TREND_SIZE, page * TREND_SIZE),
   ]);
 
-  const selWeek = weeks.find((w) => w.week_label === searchParams.week)
-    || weeks.find((w) => w.ai_summary) || weeks[0];
+  const monthOpts = Array.from(new Set([currentMonth, ...months.map((m) => m.month)])).sort().reverse();
+  const selWeek = weeks.find((w) => w.week_label === searchParams.week) || weeks.find((w) => w.ai_summary) || weeks[0];
   const latest = trend[0];
-  const chartPoints = [...daily].reverse().map((d) => ({ label: d.day, value: d.total }));
+  const chartPoints = dailyMonth.map((d) => ({ label: d.day.slice(5), value: d.total }));
   const wk = selWeek ? `&week=${encodeURIComponent(selWeek.week_label)}` : '';
-  const periodHref = (p: Period) => `/?period=${p}${wk}`;
-  const pageHref = (n: number) => `/?period=${period}&page=${n}${wk}`;
+  const mo = `&month=${encodeURIComponent(month)}`;
+  const periodHref = (p: Period) => `/?period=${p}${wk}${mo}`;
+  const pageHref = (n: number) => `/?period=${period}&page=${n}${wk}${mo}`;
 
   return (
     <main className="container">
@@ -117,16 +123,30 @@ export default async function Page({ searchParams }: { searchParams: { period?: 
         <MailButton />
       </div>
 
+      {/* 1) 총 누적현황 KPI (클릭 → 로우데이터) */}
       {total && <TotalCards t={total} />}
 
-      <div className="grid-chart">
-        <div className="card">
-          <h2>📈 일자별 접수현황 (전체)</h2>
-          <LineChart points={chartPoints} />
-        </div>
-        <InsightPanel s={selWeek} weeks={weeks} />
+      {/* 2) 접수오류유형 TOP5 + 기종별 누적 */}
+      <div className="grid-2col">
+        <BarList title="🏷️ 접수오류유형 TOP5" rows={topErr} />
+        <BarList title="📟 기종별 누적" rows={devices.map((d) => ({ key: d.model, count: d.count }))} color="#7c3aed" />
       </div>
 
+      {/* 3) 일자별 접수현황 (월 선택) */}
+      <div className="card">
+        <div className="ai-head">
+          <h2 style={{ margin: 0 }}>📈 일자별 접수현황</h2>
+          <MonthSelect months={monthOpts} selected={month} />
+        </div>
+        <div style={{ marginTop: 10 }}>
+          <LineChart points={chartPoints} />
+        </div>
+      </div>
+
+      {/* 4) AI 요약 (차트 아래) */}
+      <InsightPanel s={selWeek} weeks={weeks} />
+
+      {/* 5) 재접수율 */}
       {recon && (
         <div className="card">
           <h2>🔁 재접수율 <span className="badge">동일차량·3일내 (1차: 차량+날짜 / 2차: 차량+유형)</span></h2>
@@ -137,11 +157,7 @@ export default async function Page({ searchParams }: { searchParams: { period?: 
         </div>
       )}
 
-      <div className="grid-2col">
-        <BarList title="🏷️ 접수오류유형 TOP5" rows={topErr} />
-        <BarList title="📟 기종별 누적" rows={devices.map((d) => ({ key: d.model, count: d.count }))} color="#7c3aed" />
-      </div>
-
+      {/* 6) 기간 탭 + 추이 */}
       <div className="period-tabs">
         {(['daily', 'weekly', 'monthly'] as Period[]).map((p) => (
           <a key={p} href={periodHref(p)} className={`period-tab ${p === period ? 'active' : ''}`}>{PERIOD_LABEL[p]}</a>
@@ -178,6 +194,7 @@ export default async function Page({ searchParams }: { searchParams: { period?: 
         </div>
       </div>
 
+      {/* 7) 업로드 */}
       <div className="card">
         <h2>⬆️ CSV 업로드</h2>
         <div className="upload-2col"><CsvUpload sheet="1차필터" /><CsvUpload sheet="2차필터" /></div>

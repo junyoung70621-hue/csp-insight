@@ -132,6 +132,20 @@ export async function getDailySummaries(limit = 60, offset = 0): Promise<DailySu
   return (data ?? []) as DailySummary[];
 }
 
+/** 특정 월(YYYY-MM)의 일자별 접수현황 (오름차순) */
+export async function getDailyByMonth(month: string): Promise<DailySummary[]> {
+  if (!supabase) return [];
+  const [y, m] = month.split('-').map(Number);
+  if (!y || !m) return [];
+  const start = `${month}-01`;
+  const next = m === 12 ? `${y + 1}-01-01` : `${y}-${String(m + 1).padStart(2, '0')}-01`;
+  const { data, error } = await supabase
+    .from('cs_v_daily_summary').select('*')
+    .gte('day', start).lt('day', next).order('day', { ascending: true });
+  if (error) { console.error('getDailyByMonth:', error.message); return []; }
+  return (data ?? []) as DailySummary[];
+}
+
 export interface Recontact {
   l1_total: number; l1_recontact: number; l1_rate: number;
   l2_total: number; l2_recontact: number; l2_rate: number;
