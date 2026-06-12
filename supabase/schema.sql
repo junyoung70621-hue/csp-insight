@@ -258,6 +258,21 @@ select model, count(*) as count from (
   select (regexp_match(coalesce(device,''), 'B[0-9]{3}'))[1] as model from public.cs_l2
 ) s where model is not null group by model order by count desc;
 
+-- ── 5-3. 로우데이터 조회 View (마스킹된 행만 anon 노출, 원본PII·해시 제외) ──
+create or replace view public.cs_v_l1_rows as
+select row_key, received_at, dept, channel, consult_type, status, car_no, region,
+  public.cs_week_label(received_at) as week_label
+from public.cs_l1;
+
+create or replace view public.cs_v_l2_rows as
+select row_key, reception_id, received_at, operator, office, route, dept, device,
+  req_type, err_type, field_type, car_no, car_id, start_at, done_at, done,
+  case when regexp_replace(trim(second_filter),'\s+',' ','g')='현장인계'  then '현장인계'
+       when regexp_replace(trim(second_filter),'\s+',' ','g')='2차 미출동' then '2차미출동'
+       else '기타' end as cat,
+  public.cs_week_label(received_at) as week_label
+from public.cs_l2;
+
 -- ── 6. 권한/보안 ────────────────────────────────────────────────
 alter table public.cs_l1            enable row level security;
 alter table public.cs_l2            enable row level security;
@@ -267,5 +282,6 @@ grant select on
   public.cs_v_weekly_summary, public.cs_v_daily_summary, public.cs_v_monthly_summary,
   public.cs_v_weekly_by_dept, public.cs_v_weekly_by_type, public.cs_v_weekly_by_status,
   public.cs_v_weekly_full, public.cs_v_total_summary,
-  public.cs_v_recontact, public.cs_v_top_err, public.cs_v_device_model
+  public.cs_v_recontact, public.cs_v_top_err, public.cs_v_device_model,
+  public.cs_v_l1_rows, public.cs_v_l2_rows
 to anon, authenticated;

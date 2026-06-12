@@ -64,29 +64,48 @@ export async function getTotalSummary(): Promise<TotalSummary | null> {
   return (data && data[0]) ? (data[0] as TotalSummary) : null;
 }
 
-/** 주차 통합 요약(집계 + 분해 + AI) — 최신 주차부터 */
-export async function getWeeklySummaries(limit = 12): Promise<WeeklySummary[]> {
+/** 주차 통합 요약(집계 + 분해 + AI) — 최신 주차부터, offset 페이지네이션 */
+export async function getWeeklySummaries(limit = 12, offset = 0): Promise<WeeklySummary[]> {
   if (!supabase) return [];
   const { data, error } = await supabase
     .from('cs_v_weekly_full')
     .select('*')
     .order('week_label', { ascending: false })
-    .limit(limit);
-  if (error) {
-    console.error('getWeeklySummaries:', error.message);
-    return [];
-  }
+    .range(offset, offset + limit - 1);
+  if (error) { console.error('getWeeklySummaries:', error.message); return []; }
   return (data ?? []) as WeeklySummary[];
 }
 
+export interface Insight {
+  week_label: string;
+  ai_summary: string | null;
+  ai_highlights: string[] | null;
+  ai_suggestions: string[] | null;
+  ai_source: string | null;
+  updated_at: string | null;
+}
+
+/** 최신 주차의 Gemini 요약 */
+export async function getLatestInsight(): Promise<Insight | null> {
+  if (!supabase) return null;
+  const { data, error } = await supabase
+    .from('cs_v_weekly_full')
+    .select('week_label, ai_summary, ai_highlights, ai_suggestions, ai_source, updated_at')
+    .not('ai_summary', 'is', null)
+    .order('week_label', { ascending: false })
+    .limit(1);
+  if (error) { console.error('getLatestInsight:', error.message); return null; }
+  return (data && data[0]) ? (data[0] as Insight) : null;
+}
+
 /** 월간 추이 — 최신 월부터 */
-export async function getMonthlySummaries(limit = 6): Promise<MonthlySummary[]> {
+export async function getMonthlySummaries(limit = 12, offset = 0): Promise<MonthlySummary[]> {
   if (!supabase) return [];
   const { data, error } = await supabase
     .from('cs_v_monthly_summary')
     .select('*')
     .order('month', { ascending: false })
-    .limit(limit);
+    .range(offset, offset + limit - 1);
   if (error) { console.error('getMonthlySummaries:', error.message); return []; }
   return (data ?? []) as MonthlySummary[];
 }
@@ -102,13 +121,13 @@ export interface DailySummary {
 }
 
 /** 일자별 접수현황 — 최신일부터 limit개 (차트는 오름차순으로 표시) */
-export async function getDailySummaries(limit = 60): Promise<DailySummary[]> {
+export async function getDailySummaries(limit = 60, offset = 0): Promise<DailySummary[]> {
   if (!supabase) return [];
   const { data, error } = await supabase
     .from('cs_v_daily_summary')
     .select('*')
     .order('day', { ascending: false })
-    .limit(limit);
+    .range(offset, offset + limit - 1);
   if (error) { console.error('getDailySummaries:', error.message); return []; }
   return (data ?? []) as DailySummary[];
 }
@@ -145,4 +164,26 @@ export async function getDeviceModels(): Promise<DeviceModel[]> {
     .from('cs_v_device_model').select('*').order('count', { ascending: false });
   if (error) { console.error('getDeviceModels:', error.message); return []; }
   return (data ?? []) as DeviceModel[];
+}
+
+// ── 로우데이터(마스킹됨) ──────────────────────────────────────
+export type Row = Record<string, any>;
+
+/** 1차필터(전화상담) 행 — 최신순, 페이지네이션 */
+export async function getL1Rows(limit = 50, offset = 0): Promise<Row[]> {
+  if (!supabase) return [];
+  const { data, error } = await supabase
+    .from('cs_v_l1_rows').select('*').order('received_at', { ascending: false }).range(offset, offset + limit - 1);
+  if (error) { console.error('getL1Rows:', error.message); return []; }
+  return (data ?? []) as Row[];
+}
+
+/** 2차필터(AS) 행 — cat(2차미출동/현장인계) 필터, 최신순, 페이지네이션 */
+export async function getL2Rows(cat: string | null, limit = 50, offset = 0): Promise<Row[]> {
+  if (!supabase) return [];
+  let q = supabase.from('cs_v_l2_rows').select('*');
+  if (cat) q = q.eq('cat', cat);
+  const { data, error } = await q.order('received_at', { ascending: false }).range(offset, offset + limit - 1);
+  if (error) { console.error('getL2Rows:', error.message); return []; }
+  return (data ?? []) as Row[];
 }
