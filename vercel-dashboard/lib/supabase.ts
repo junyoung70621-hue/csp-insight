@@ -87,9 +87,62 @@ export async function getMonthlySummaries(limit = 6): Promise<MonthlySummary[]> 
     .select('*')
     .order('month', { ascending: false })
     .limit(limit);
-  if (error) {
-    console.error('getMonthlySummaries:', error.message);
-    return [];
-  }
+  if (error) { console.error('getMonthlySummaries:', error.message); return []; }
   return (data ?? []) as MonthlySummary[];
+}
+
+export interface DailySummary {
+  day: string;
+  total: number;
+  first_filter: number;
+  second_filter: number;
+  handover: number;
+  filter_rate: number;
+  avg_days: number;
+}
+
+/** 일자별 접수현황 — 최신일부터 limit개 (차트는 오름차순으로 표시) */
+export async function getDailySummaries(limit = 60): Promise<DailySummary[]> {
+  if (!supabase) return [];
+  const { data, error } = await supabase
+    .from('cs_v_daily_summary')
+    .select('*')
+    .order('day', { ascending: false })
+    .limit(limit);
+  if (error) { console.error('getDailySummaries:', error.message); return []; }
+  return (data ?? []) as DailySummary[];
+}
+
+export interface Recontact {
+  l1_total: number; l1_recontact: number; l1_rate: number;
+  l2_total: number; l2_recontact: number; l2_rate: number;
+}
+
+export async function getRecontact(): Promise<Recontact | null> {
+  if (!supabase) return null;
+  const { data, error } = await supabase.from('cs_v_recontact').select('*').limit(1);
+  if (error) { console.error('getRecontact:', error.message); return null; }
+  return (data && data[0]) ? (data[0] as Recontact) : null;
+}
+
+export interface KeyCount { key: string; count: number; }
+
+/** 접수오류유형 TOP N (2차) */
+export async function getTopErr(limit = 5): Promise<KeyCount[]> {
+  if (!supabase) return [];
+  const { data, error } = await supabase
+    .from('cs_v_top_err').select('*').order('count', { ascending: false }).limit(limit);
+  if (error) { console.error('getTopErr:', error.message); return []; }
+  return (data ?? []) as KeyCount[];
+}
+
+export interface DeviceModel { model: string; count: number; }
+
+/** 기종별 누적(B700/B710/B800 등) */
+export async function getDeviceModels(): Promise<DeviceModel[]> {
+  if (!supabase) return [];
+  const { data, error } = await supabase
+    .from('cs_v_device_model').select('*').order('count', { ascending: false });
+  if (error) { console.error('getDeviceModels:', error.message); return []; }
+  return (data ?? []) as DeviceModel[];
 }

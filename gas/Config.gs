@@ -40,7 +40,8 @@ const COLS_L1 = {
   channel: '접수채널',
   consultType: '상담유형(대)',
   status: '처리상태',
-  carNo: '차량번호',        // 마스킹
+  carNo: '차량번호',        // 마스킹(표시) + 해시(재접수 매칭)
+  errType: '오류유형',      // 재접수 매칭용 장애유형
   region: '지역명',
   // 합성키 재료(원본값) — 저장하진 않음
   callNo: '발신번호',

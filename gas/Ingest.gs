@@ -72,7 +72,7 @@ function refreshTab_(tabName, colsMap, buildFn, table) {
   return sent;
 }
 
-/** 1차필터(전화상담) → cs_l1 행. 행번호 키(전체 새로고침이라 안정적), 차량번호만 마스킹 */
+/** 1차필터(전화상담) → cs_l1 행. 행번호 키(전체 새로고침이라 안정적), 차량번호 마스킹+해시 */
 function buildL1Row_(rec, sheetRow) {
   return {
     row_key: 'L1R:' + sheetRow,
@@ -83,6 +83,8 @@ function buildL1Row_(rec, sheetRow) {
     consult_type: str_(rec.consultType),
     status: str_(rec.status),
     car_no: maskCarNo(rec.carNo),
+    car_hash: hashCarNo_(rec.carNo),     // 재접수 매칭용(원문 미저장)
+    err_type: str_(rec.errType),         // 재접수 매칭용 장애유형
     region: str_(rec.region),
   };
 }
@@ -105,6 +107,7 @@ function buildL2Row_(rec, sheetRow) {
     field_type: str_(rec.fieldType),
     car_no: maskCarNo(rec.carNo),
     car_id: maskCarNo(rec.carId),
+    car_hash: hashCarNo_(rec.carNo),     // 재접수 매칭용(원문 미저장)
     start_at: toIso_(rec.startAt),
     done_at: toIso_(rec.doneAt),
     done: str_(rec.done),
@@ -126,3 +129,11 @@ function toIso_(v) {
 }
 
 function str_(v) { return String(v == null ? '' : v).trim(); }
+
+/** 차량번호 → 단방향 해시(원문 미저장, 재접수 동일차량 매칭용). 빈값은 '' */
+function hashCarNo_(v) {
+  var s = String(v == null ? '' : v).replace(/\s+/g, '').toUpperCase();
+  if (!s) return '';
+  var d = Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, s, Utilities.Charset.UTF_8);
+  return d.map(function (b) { return ('0' + (b & 0xff).toString(16)).slice(-2); }).join('');
+}

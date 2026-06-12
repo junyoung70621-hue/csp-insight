@@ -72,6 +72,13 @@ create table if not exists public.cs_l2 (
 create index if not exists idx_cs_l2_received on public.cs_l2 (received_at);
 create index if not exists idx_cs_l2_second   on public.cs_l2 (second_filter);
 
+-- 재접수율용 추가 컬럼(원문 차량번호 대신 단방향 해시; 1차에는 오류유형도 추가)
+alter table public.cs_l1 add column if not exists car_hash text;
+alter table public.cs_l1 add column if not exists err_type text;
+alter table public.cs_l2 add column if not exists car_hash text;
+create index if not exists idx_cs_l2_carhash on public.cs_l2 (car_hash);
+create index if not exists idx_cs_l1_carhash on public.cs_l1 (car_hash);
+
 -- AI 인사이트 (GAS 가 주차 집계 결과로 생성·저장)
 create table if not exists public.cs_weekly_insight (
   week_label     text primary key,
@@ -210,6 +217,47 @@ select s.*,
 from public.cs_v_weekly_summary s
 left join public.cs_weekly_insight i on i.week_label = s.week_label;
 
+-- ── 5-2. 재접수율 / 접수유형 TOP / 기종별 누적 ──────────────────
+-- 재접수: 동일 차량(car_hash) + 동일 장애유형(err_type) 이 직전 3일 이내 재접수.
+--   분모 = 차량 식별 가능한(car_hash 있는) 접수 건수.
+create or replace view public.cs_v_recontact as
+with l2 as (
+  select c.row_key,
+    exists(select 1 from public.cs_l2 p
+           where p.car_hash = c.car_hash and p.err_type = c.err_type
+             and p.received_at < c.received_at
+             and p.received_at >= c.received_at - interval '3 days') as is_re
+  from public.cs_l2 c
+  where c.received_at is not null and coalesce(c.car_hash,'') <> '' and coalesce(c.err_type,'') <> ''
+),
+l1 as (
+  select c.row_key,
+    exists(select 1 from public.cs_l1 p
+           where p.car_hash = c.car_hash and p.err_type = c.err_type
+             and p.received_at < c.received_at
+             and p.received_at >= c.received_at - interval '3 days') as is_re
+  from public.cs_l1 c
+  where c.received_at is not null and coalesce(c.car_hash,'') <> '' and coalesce(c.err_type,'') <> ''
+)
+select
+  (select count(*) from l1)                          as l1_total,
+  (select count(*) filter (where is_re) from l1)     as l1_recontact,
+  case when (select count(*) from l1)=0 then 0 else round((select count(*) filter (where is_re) from l1)*100.0/(select count(*) from l1),1) end as l1_rate,
+  (select count(*) from l2)                          as l2_total,
+  (select count(*) filter (where is_re) from l2)     as l2_recontact,
+  case when (select count(*) from l2)=0 then 0 else round((select count(*) filter (where is_re) from l2)*100.0/(select count(*) from l2),1) end as l2_rate;
+
+-- 접수유형(접수오류유형, 2차) 빈도 — 대시보드에서 TOP5 사용
+create or replace view public.cs_v_top_err as
+select coalesce(nullif(trim(err_type),''),'(미입력)') as key, count(*) as count
+from public.cs_l2 group by 1 order by count desc;
+
+-- 기종별 누적: 단말기구분에서 Bxxx (B700/B710/B800 등) 추출
+create or replace view public.cs_v_device_model as
+select model, count(*) as count from (
+  select (regexp_match(coalesce(device,''), 'B[0-9]{3}'))[1] as model from public.cs_l2
+) s where model is not null group by model order by count desc;
+
 -- ── 6. 권한/보안 ────────────────────────────────────────────────
 alter table public.cs_l1            enable row level security;
 alter table public.cs_l2            enable row level security;
@@ -218,5 +266,6 @@ alter table public.cs_weekly_insight enable row level security;
 grant select on
   public.cs_v_weekly_summary, public.cs_v_daily_summary, public.cs_v_monthly_summary,
   public.cs_v_weekly_by_dept, public.cs_v_weekly_by_type, public.cs_v_weekly_by_status,
-  public.cs_v_weekly_full, public.cs_v_total_summary
+  public.cs_v_weekly_full, public.cs_v_total_summary,
+  public.cs_v_recontact, public.cs_v_top_err, public.cs_v_device_model
 to anon, authenticated;
