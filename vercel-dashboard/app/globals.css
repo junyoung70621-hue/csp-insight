@@ -1,11 +1,13 @@
 :root {
-  --bg: #f6f7f9;
+  --bg: #f5f6f8;
   --card: #ffffff;
   --border: #e5e7eb;
   --text: #111827;
   --muted: #6b7280;
-  --brand: #2563eb;
-  --brand-soft: #eff6ff;
+  --brand: #e6007e;          /* ATEC 마젠타 */
+  --brand-dark: #c20068;
+  --brand-soft: #fdeaf3;
+  --brand-border: #f6b8d6;
 }
 
 * { box-sizing: border-box; }
@@ -82,14 +84,14 @@ td.num, th.num { text-align: right; }
   font-size: 13px; border-radius: 8px; padding: 10px 14px; margin-bottom: 16px;
 }
 
-.total-card { background: linear-gradient(180deg,#f8fbff,#fff); }
+.total-card { background: linear-gradient(180deg,var(--brand-soft),#fff); }
 .total-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
 @media (max-width: 720px) { .total-grid { grid-template-columns: repeat(3, 1fr); } }
 .total-cell {
   text-align: center; padding: 14px 8px; border: 1px solid var(--border);
   border-radius: 10px; background: var(--card);
 }
-.total-cell.accent { background: var(--brand-soft); border-color: #bfdbfe; }
+.total-cell.accent { background: var(--brand-soft); border-color: var(--brand-border); }
 .total-val { font-size: 22px; font-weight: 700; color: #111827; }
 .total-cell.accent .total-val { color: var(--brand); }
 .total-lbl { font-size: 12px; color: var(--muted); margin-top: 4px; }
@@ -97,7 +99,7 @@ td.num, th.num { text-align: right; }
 /* 업로드 (1차/2차 2열) */
 .upload-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 @media (max-width: 720px) { .upload-2col { grid-template-columns: 1fr; } }
-.upload-box { border: 1px solid var(--border); border-radius: 10px; padding: 14px; background: #fafbff; }
+.upload-box { border: 1px solid var(--border); border-radius: 10px; padding: 14px; background: #fdf6fa; }
 .upload-title { font-weight: 700; font-size: 14px; margin-bottom: 8px; }
 .upload-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
 .upload-row input[type=file] { font-size: 13px; }
@@ -110,6 +112,8 @@ td.num, th.num { text-align: right; }
 
 /* 헤더 + 액션 버튼 */
 .header-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+.brand { display: flex; align-items: center; gap: 14px; }
+.brand-logo { font-size: 30px; font-weight: 900; letter-spacing: -1px; color: var(--brand); line-height: 1; }
 .header-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .top-btn { font-size: 14px; font-weight: 600; padding: 9px 16px; border-radius: 8px; border: 1px solid var(--border); background: var(--card); color: var(--text); cursor: pointer; }
 .top-btn:hover { border-color: var(--brand); color: var(--brand); }
@@ -161,8 +165,8 @@ td.num, th.num { text-align: right; }
 .kpi-grid-5 { grid-template-columns: repeat(5, 1fr); }
 @media (max-width: 720px) { .kpi-grid-5 { grid-template-columns: repeat(2, 1fr); } }
 .kpi-link { text-decoration: none; color: inherit; transition: box-shadow .15s, transform .1s; }
-.kpi-link:hover { box-shadow: 0 4px 14px rgba(37,99,235,.15); transform: translateY(-1px); border-color: #bfdbfe; }
-.kpi.accent { background: var(--brand-soft); border-color: #bfdbfe; }
+.kpi-link:hover { box-shadow: 0 4px 14px rgba(230,0,126,.18); transform: translateY(-1px); border-color: var(--brand-border); }
+.kpi.accent { background: var(--brand-soft); border-color: var(--brand-border); }
 .kpi.accent .num { color: var(--brand); }
 
 /* 차트 + AI요약 2열 */

@@ -23,7 +23,7 @@ export default function LineChart({ points }: { points: { label: string; value: 
             <text x={PL - 6} y={y(tv) + 3} textAnchor="end" fontSize="10" fill="#9ca3af">{tv.toLocaleString()}</text>
           </g>
         ))}
-        <path d={area} fill="rgba(37,99,235,0.08)" />
+        <path d={area} fill="rgba(230,0,126,0.10)" />
         <path d={line} fill="none" stroke="var(--brand)" strokeWidth="2" />
         {points.map((p, i) => (
           <g key={i}>

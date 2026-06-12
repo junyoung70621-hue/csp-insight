@@ -119,7 +119,10 @@ export default async function Page({ searchParams }: { searchParams: { period?: 
   return (
     <main className="container">
       <div className="header header-row">
-        <div><h1>📞 고객센터 전화접수 현황</h1><p>집계는 Supabase View · 화면 직접 조회 · PII 마스킹</p></div>
+        <div className="brand">
+          <span className="brand-logo">ATEC</span>
+          <div><h1>고객센터 전화접수 현황</h1><p>집계는 Supabase View · 화면 직접 조회 · PII 마스킹</p></div>
+        </div>
         <div className="header-actions"><UploadModal /><MailButton /></div>
       </div>
 
@@ -129,7 +132,7 @@ export default async function Page({ searchParams }: { searchParams: { period?: 
       {/* 2) 접수오류유형 TOP5 + 기종별 누적 */}
       <div className="grid-2col">
         <BarList title="🏷️ 접수오류유형 TOP5" rows={topErr} />
-        <BarList title="📟 기종별 누적" rows={devices.map((d) => ({ key: d.model, count: d.count }))} color="#7c3aed" />
+        <BarList title="📟 기종별 누적" rows={devices.map((d) => ({ key: d.model, count: d.count }))} color="#a3006b" />
       </div>
 
       {/* 3) 일자별 접수현황 (월 선택) */}
