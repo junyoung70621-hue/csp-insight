@@ -44,6 +44,29 @@ function runDaily() {
   return { ok: !errors.length, summary: summary, errors: errors };
 }
 
+/**
+ * 모든 주차에 대해 Gemini(or 폴백) 요약을 생성·저장(backfill).
+ * 대시보드 주차 드롭다운에서 과거 주차도 요약이 보이게 하려면 1회 실행.
+ * (GEMINI_API_KEY 없으면 규칙기반 폴백으로 채워짐)
+ */
+function backfillInsights() {
+  var rows = supabaseSelect_('cs_v_weekly_summary', 'select=week_label&order=week_label.desc');
+  var n = 0;
+  for (var i = 0; i < rows.length; i++) {
+    var label = rows[i].week_label;
+    try {
+      var stats = analyzeWeek(label);
+      var insight = generateInsight(stats);
+      upsertWeeklyInsight(label, insight);
+      n++;
+    } catch (e) {
+      logEvent_('WARN', 'insight', 'backfill 실패(' + label + '): ' + (e && e.message));
+    }
+  }
+  logEvent_('INFO', 'insight', 'backfill 완료 ' + n + '주차');
+  return n;
+}
+
 function stepErr_(step, e) {
   const msg = step + ': ' + (e && e.message ? e.message : e);
   logEvent_('ERROR', step, msg);
