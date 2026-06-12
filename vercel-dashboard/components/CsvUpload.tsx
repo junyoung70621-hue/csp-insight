@@ -20,8 +20,7 @@ export default function CsvUpload() {
       const r = await fetch('/api/upload', { method: 'POST', body: fd });
       const d = await r.json();
       if (d.ok) {
-        const sync = d.sync ? ` · 동기화 1차=${d.sync.l1}/2차=${d.sync.l2}` : '';
-        setMsg({ ok: true, text: `완료: ${d.sheet}에 ${d.added}행 추가${sync}` });
+        setMsg({ ok: true, text: `완료: ${d.sheet} 시트에 ${d.added}행 추가됨 · 대시보드는 잠시 후(자동 동기화) 반영됩니다` });
         setFile(null);
         router.refresh();
       } else {
@@ -46,7 +45,7 @@ export default function CsvUpload() {
         <button className="upload-btn" onClick={submit} disabled={busy}>{busy ? '처리 중…' : '업로드'}</button>
       </div>
       {msg && <div className={`upload-msg ${msg.ok ? 'ok' : 'err'}`}>{msg.text}</div>}
-      <div className="upload-hint">선택한 시트 맨 아래에 행이 추가되고, 자동으로 집계까지 갱신됩니다. (같은 파일을 두 번 올리면 중복될 수 있어요)</div>
+      <div className="upload-hint">선택한 시트 맨 아래에 행이 추가됩니다. 집계(대시보드)는 자동 동기화 주기에 맞춰 반영돼요. (같은 파일을 두 번 올리면 중복될 수 있어요)</div>
     </div>
   );
 }

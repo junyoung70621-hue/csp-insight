@@ -98,3 +98,15 @@ function removeTriggers_() {
     if (t.getHandlerFunction() === 'runDaily') ScriptApp.deleteTrigger(t);
   });
 }
+
+/**
+ * 업로드 반영용: 10분마다 syncToSupabase 실행(시트→Supabase 전체 새로고침).
+ * 대시보드 CSV 업로드가 ≤10분 내 자동 반영됨. 1회 수동 실행.
+ */
+function installSyncTrigger() {
+  ScriptApp.getProjectTriggers().forEach(t => {
+    if (t.getHandlerFunction() === 'syncToSupabase') ScriptApp.deleteTrigger(t);
+  });
+  ScriptApp.newTrigger('syncToSupabase').timeBased().everyMinutes(10).create();
+  logEvent_('INFO', 'trigger', 'syncToSupabase 10분 주기 트리거 설치');
+}
