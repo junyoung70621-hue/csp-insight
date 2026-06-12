@@ -69,13 +69,18 @@ td.num, th.num { text-align: right; }
 .bar-wrap { background: #f1f5f9; border-radius: 6px; height: 8px; overflow: hidden; margin-top: 4px; }
 .bar { background: var(--brand); height: 100%; }
 
-.week-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
-.week-tab {
-  font-size: 13px; padding: 6px 12px; border-radius: 999px;
+.week-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+.week-bar-label { font-size: 13px; color: var(--muted); font-weight: 600; }
+.week-select {
+  font-size: 14px; padding: 8px 12px; border-radius: 8px;
   border: 1px solid var(--border); background: var(--card); color: var(--text);
-  text-decoration: none;
+  min-width: 240px; cursor: pointer;
 }
-.week-tab.active { background: var(--brand); color: #fff; border-color: var(--brand); }
+.week-select:focus { outline: 2px solid var(--brand); border-color: var(--brand); }
+.note {
+  background: #fffbeb; border: 1px solid #fde68a; color: #92400e;
+  font-size: 13px; border-radius: 8px; padding: 10px 14px; margin-bottom: 16px;
+}
 
 .empty { text-align: center; color: var(--muted); padding: 48px 0; }
 .foot { color: var(--muted); font-size: 12px; margin-top: 28px; }

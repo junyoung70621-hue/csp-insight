@@ -2,6 +2,7 @@ import {
   getWeeklySummaries, getMonthlySummaries, supabaseConfigured,
   type Breakdown, type WeeklySummary, type MonthlySummary,
 } from '@/lib/supabase';
+import WeekSelect from '@/components/WeekSelect';
 
 export const dynamic = 'force-dynamic';   // 항상 최신(View 직접 조회)
 export const revalidate = 0;
@@ -127,7 +128,11 @@ export default async function Page({ searchParams }: { searchParams: { week?: st
     );
   }
 
-  const selected = summaries.find((s) => s.week_label === searchParams.week) || summaries[0];
+  // 기본 선택: URL 지정 주차 → 없으면 2차(AS) 데이터가 있는 최신 주차 → 그것도 없으면 최신
+  const selected =
+    summaries.find((s) => s.week_label === searchParams.week) ||
+    summaries.find((s) => s.second_filter > 0) ||
+    summaries[0];
 
   return (
     <main className="container">
@@ -136,17 +141,19 @@ export default async function Page({ searchParams }: { searchParams: { week?: st
         <p>집계 주차(목~수) · 집계는 Supabase View, 화면은 직접 조회 · PII 마스킹</p>
       </div>
 
-      <div className="week-tabs">
-        {summaries.map((s) => (
-          <a
-            key={s.week_label}
-            href={`/?week=${encodeURIComponent(s.week_label)}`}
-            className={`week-tab ${s.week_label === selected.week_label ? 'active' : ''}`}
-          >
-            {s.week_label}
-          </a>
-        ))}
+      <div className="week-bar">
+        <span className="week-bar-label">주차 선택</span>
+        <WeekSelect
+          weeks={summaries.map((s) => ({ week_label: s.week_label, total: s.total }))}
+          selected={selected.week_label}
+        />
       </div>
+
+      {selected.second_filter === 0 && (
+        <div className="note">
+          ※ 이 주차는 아직 2차(AS) 처리 데이터가 없어 필터링율이 100%·현장인계 0으로 표시됩니다(진행 중인 주차).
+        </div>
+      )}
 
       <div className="kpi-grid">
         <Kpi num={`${selected.total}건`} lbl="전체 접수" />
