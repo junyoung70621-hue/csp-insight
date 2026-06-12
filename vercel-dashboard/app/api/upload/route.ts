@@ -95,39 +95,56 @@ export async function POST(req: NextRequest) {
     const base = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}`;
     const tab = encodeURIComponent(sheet);
 
-    // 시트 헤더 행 읽기 (열 매핑 기준)
-    const hr = await fetch(`${base}/values/${tab}!1:1`, { headers: auth });
-    const hj = await hr.json();
-    if (!hr.ok) {
-      return NextResponse.json({ ok: false, error: '시트 헤더 읽기 실패: ' + JSON.stringify(hj).slice(0, 300) }, { status: 502 });
+    // 시트 전체 읽기 (헤더 + 기존행) — 중복 판정용
+    const gr = await fetch(`${base}/values/${tab}`, { headers: auth });
+    const gj = await gr.json();
+    if (!gr.ok) {
+      return NextResponse.json({ ok: false, error: '시트 읽기 실패: ' + JSON.stringify(gj).slice(0, 300) }, { status: 502 });
     }
-    const sheetHeaders: string[] = (hj.values?.[0] || []).map((s: any) => String(s).trim());
+    const existing: any[][] = gj.values || [];
+    const sheetHeaders: string[] = (existing[0] || []).map((s: any) => String(s).trim());
     const nCols = sheetHeaders.length || rows[0].length;
 
     // CSV 헤더 → 시트 열 매핑(이름 기준), 없으면 -1
     const csvHeaders = rows[0].map((s) => String(s).trim());
     const colMap = csvHeaders.map((h) => sheetHeaders.indexOf(h));
+    // 중복키 산정에 쓸 시트 컬럼 인덱스(= CSV가 채우는 컬럼만, 수식열 A~D 등은 제외)
+    const keyIdx = Array.from(new Set(colMap.filter((i) => i >= 0))).sort((a, b) => a - b);
+    const norm = (v: any) => String(v ?? '').trim();
+    const keyOf = (arr: any[]) => keyIdx.map((ci) => norm(arr[ci])).join('');
 
+    // 기존 행들의 키 Set
+    const seen = new Set<string>();
+    for (let r = 1; r < existing.length; r++) {
+      if (keyIdx.length) seen.add(keyOf(existing[r]));
+    }
+
+    // 신규 행만 추림 (파일 내부 중복도 제거)
     const values: string[][] = [];
+    let skipped = 0;
     for (let r = 1; r < rows.length; r++) {
       const arr = new Array(nCols).fill('');
       for (let c = 0; c < csvHeaders.length; c++) {
         const sc = colMap[c];
         if (sc >= 0) arr[sc] = rows[r][c] ?? '';
       }
+      const key = keyOf(arr);
+      if (keyIdx.length && seen.has(key)) { skipped++; continue; }
+      seen.add(key);
       values.push(arr);
     }
 
-    // 시트 맨 아래에 추가
-    const ap = await fetch(
-      `${base}/values/${tab}!A1:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`,
-      { method: 'POST', headers: { ...auth, 'Content-Type': 'application/json' }, body: JSON.stringify({ values }) });
-    const aj = await ap.json();
-    if (!ap.ok) {
-      return NextResponse.json({ ok: false, error: 'append 실패: ' + JSON.stringify(aj).slice(0, 300) }, { status: 502 });
+    if (values.length) {
+      const ap = await fetch(
+        `${base}/values/${tab}!A1:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`,
+        { method: 'POST', headers: { ...auth, 'Content-Type': 'application/json' }, body: JSON.stringify({ values }) });
+      const aj = await ap.json();
+      if (!ap.ok) {
+        return NextResponse.json({ ok: false, error: 'append 실패: ' + JSON.stringify(aj).slice(0, 300) }, { status: 502 });
+      }
     }
 
-    return NextResponse.json({ ok: true, sheet, added: values.length });
+    return NextResponse.json({ ok: true, sheet, added: values.length, skipped });
   } catch (e: any) {
     return NextResponse.json({ ok: false, error: e?.message || String(e) }, { status: 500 });
   }

@@ -23,7 +23,8 @@ export default function UploadModal() {
       const r = await fetch('/api/upload', { method: 'POST', body: fd });
       const d = await r.json();
       if (d.ok) {
-        setMsg({ ok: true, text: `완료: ${sheet}에 ${d.added}행 추가됨 · 집계는 잠시 후 반영` });
+        const dup = d.skipped ? ` · 중복 ${d.skipped}건 제외` : '';
+        setMsg({ ok: true, text: `완료: ${sheet}에 ${d.added}행 추가${dup} · 집계는 잠시 후 반영` });
         setFile(null);
         router.refresh();
       } else {
