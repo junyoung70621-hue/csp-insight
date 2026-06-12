@@ -1,0 +1,22 @@
+# dependencies / build output
+**/node_modules/
+**/.next/
+**/.vercel/
+**/out/
+**/build/
+*.tsbuildinfo
+
+# env / secrets
+**/.env
+**/.env.local
+**/.env*.local
+
+# data / office files (not source code) — 연습·원본 데이터는 저장소에 올리지 않음
+새 폴더/
+*.xlsx
+*.xlsm
+*.docx
+*.pdf
+
+# misc
+.DS_Store

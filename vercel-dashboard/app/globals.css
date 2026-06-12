@@ -1,0 +1,81 @@
+:root {
+  --bg: #f6f7f9;
+  --card: #ffffff;
+  --border: #e5e7eb;
+  --text: #111827;
+  --muted: #6b7280;
+  --brand: #2563eb;
+  --brand-soft: #eff6ff;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Malgun Gothic", "맑은 고딕", -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--brand); }
+
+.container { max-width: 1080px; margin: 0 auto; padding: 32px 20px 64px; }
+
+.header h1 { font-size: 24px; margin: 0 0 4px; }
+.header p { color: var(--muted); margin: 0 0 24px; font-size: 14px; }
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 24px;
+}
+@media (max-width: 720px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+
+.kpi {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px;
+}
+.kpi .num { font-size: 28px; font-weight: 700; color: var(--brand); }
+.kpi .lbl { font-size: 13px; color: var(--muted); margin-top: 4px; }
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+.card h2 { font-size: 16px; margin: 0 0 14px; }
+
+.ai-box { background: var(--brand-soft); border-left: 4px solid var(--brand); }
+.ai-box ul { margin: 8px 0 0; padding-left: 18px; }
+.ai-box li { font-size: 14px; line-height: 1.7; }
+.badge { font-size: 12px; color: var(--muted); margin-left: 8px; }
+
+.grid-2 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+@media (max-width: 720px) { .grid-2 { grid-template-columns: 1fr; } }
+
+table { width: 100%; border-collapse: collapse; }
+th { text-align: left; font-size: 12px; color: var(--muted); padding: 8px 6px; border-bottom: 2px solid var(--border); }
+td { font-size: 14px; padding: 8px 6px; border-bottom: 1px solid #f1f5f9; }
+td.num, th.num { text-align: right; }
+
+.bar-wrap { background: #f1f5f9; border-radius: 6px; height: 8px; overflow: hidden; margin-top: 4px; }
+.bar { background: var(--brand); height: 100%; }
+
+.week-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+.week-tab {
+  font-size: 13px; padding: 6px 12px; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--card); color: var(--text);
+  text-decoration: none;
+}
+.week-tab.active { background: var(--brand); color: #fff; border-color: var(--brand); }
+
+.empty { text-align: center; color: var(--muted); padding: 48px 0; }
+.foot { color: var(--muted); font-size: 12px; margin-top: 28px; }
